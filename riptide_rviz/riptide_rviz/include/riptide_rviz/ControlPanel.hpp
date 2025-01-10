@@ -7,6 +7,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/int8.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
@@ -92,6 +93,9 @@ namespace riptide_rviz
         void handleStopDragCal();
         void handleTriggerDragCal();
 
+        //simualtor apply
+        void simulator_apply_clickec();
+
         //publish the current set point
         void pubCurrentSetpoint();
 
@@ -156,6 +160,7 @@ namespace riptide_rviz
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr auxPub;
         rclcpp::Publisher<riptide_msgs2::msg::KillSwitchReport>::SharedPtr killStatePub;
         rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr dragCalTriggerPub;
+        rclcpp::Publisher<std_msgs::msg::String>::SharedPtr clawObjectPub;
 
         // ROS Timers
         rclcpp::TimerBase::SharedPtr killPubTimer;
