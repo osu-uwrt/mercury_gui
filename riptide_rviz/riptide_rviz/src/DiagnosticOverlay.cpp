@@ -47,17 +47,6 @@ namespace riptide_rviz
         lastLeak = node->get_clock()->now() - 1h;
         lastGyro = node->get_clock()->now() - 1h;
 
-        // Get temperature parameters
-        auto paramClient = std::make_shared<rclcpp::SyncParametersClient>(
-            node, robotNsProperty->getStdString() + "/riptide_gyro");
-        if (paramClient->wait_for_service(std::chrono::seconds(1))) {
-            auto params = paramClient->get_parameters({"temp_min", "temp_max"});
-            if (params.size() == 2) {
-                tempMin = params[0].as_double();
-                tempMax = params[1].as_double();
-            }
-        }
-
         // sub to gyro status
         std::string gyroTopic = robotNsProperty->getStdString() + "/gyro/status";
         gyroSub = node->create_subscription<riptide_msgs2::msg::GyroStatus>(
