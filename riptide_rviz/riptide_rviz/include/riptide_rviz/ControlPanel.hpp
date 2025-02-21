@@ -12,6 +12,7 @@
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <std_srvs/srv/set_bool.hpp>
+#include <robot_localization/srv/set_pose.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 
 #include <interactive_markers/interactive_marker_server.hpp>
@@ -31,6 +32,8 @@
 #include <QMessageBox>
 #include <QString>
 
+#include <vector>
+
 //
 // CONTROLLER SELECTION
 //
@@ -45,6 +48,7 @@ namespace riptide_rviz
     {
         using Trigger = std_srvs::srv::Trigger;
         using SetBool = std_srvs::srv::SetBool;
+        using SetPose = robot_localization::srv::SetPose;
         using CalibrateDrag = riptide_msgs2::action::CalibrateDragNew;
         using CalibrateDragGH = rclcpp_action::ClientGoalHandle<CalibrateDrag>;
 
@@ -110,8 +114,10 @@ namespace riptide_rviz
         void updateCalStatus(const std::string& status);
         void callTriggerService(rclcpp::Client<Trigger>::SharedPtr client);
         void callSetBoolService(rclcpp::Client<SetBool>::SharedPtr client, bool value);
+        void callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose);
         void waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client);
         void waitForSetBoolResponse(rclcpp::Client<SetBool>::SharedPtr client);
+        void waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client);
         void setDragCalRunning(bool running);
         void dragGoalResponseCb(const CalibrateDragGH::SharedPtr &goal_handle);
         void dragResultCb(const CalibrateDragGH::WrappedResult &result);
@@ -182,9 +188,12 @@ namespace riptide_rviz
             reloadCompleteClient;
 
         rclcpp::Client<SetBool>::SharedPtr setTeleopClient;
+
+        rclcpp::Client<SetPose>::SharedPtr setSimPoseClient;
         
         std::shared_future<Trigger::Response::SharedPtr> activeClientFuture;
         std::shared_future<SetBool::Response::SharedPtr> activeSetBoolClientFuture;
+        std::shared_future<SetPose::Response::SharedPtr> activeSetPoseClientFuture;
         int64_t srvReqId;
         rclcpp::Time clientSendTime;
 

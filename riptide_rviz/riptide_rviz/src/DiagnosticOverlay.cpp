@@ -45,6 +45,7 @@ namespace riptide_rviz
         lastKill = node->get_clock()->now() - 1h;
         lastZed = node->get_clock()->now() - 1h;
         lastLeak = node->get_clock()->now() - 1h;
+        lastPressure = node->get_clock()->now() - 1h;
 
         // make the diagnostic subscriber
         diagSub = node->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
@@ -54,6 +55,11 @@ namespace riptide_rviz
         std::string zedTopic = robotNsProperty->getStdString() + "/zed/zed_node/temperature/imu";
         zedSub = node->create_subscription<sensor_msgs::msg::Temperature>(
             zedTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::zedCallback, this, _1)
+        );
+
+        std::string pressureTopic = robotNsProperty->getStdString() + "/state/pressure";
+        pressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            pressureTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::pressureCallback, this, _1)
         );
 
         std::string leakTopic = robotNsProperty->getStdString() + "/state/leak";
@@ -82,6 +88,9 @@ namespace riptide_rviz
         zedLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         zedLedConfigId = addCircle(zedLedConfig);
 
+        pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        pressureLedConfigId = addCircle(pressureLedConfig);
+
         leakLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         leakLedConfigId = addCircle(leakLedConfig);
 
@@ -101,14 +110,21 @@ namespace riptide_rviz
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
+        PaintedTextConfig pressureLedLabel = {
+            127, 20, 0, 0, "Pres",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
         PaintedTextConfig leakLedLabel = {
             6, 70, 0, 0, "Leak",
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
+
         addText(diagLedLabel);
         addText(killLedLabel);
         addText(zedLedLabel);
+        addText(pressureLedLabel);
         addText(leakLedLabel);
     }
 
@@ -200,7 +216,6 @@ namespace riptide_rviz
     }
 
     void DiagnosticOverlay::leakCallback(const std_msgs::msg::Bool& msg) {
-        static bool redFlash = true;
         rclcpp::Node::SharedPtr node;
         leakTimedOut = false;
 
@@ -255,6 +270,41 @@ namespace riptide_rviz
         lastLeak = node->get_clock()->now();
     }
 
+    void DiagnosticOverlay::pressureCallback(const std_msgs::msg::Float32 &msg) {
+        rclcpp::Node::SharedPtr node;
+        leakTimedOut = false;
+
+        //pressure cases
+        // 0 - idle unpressurized
+        // -# - the pressure when a leak is detected
+        // +# - the pressure when a leak is not detected
+
+        if (msg.data == 0) {
+
+            //unpressurized so go organge
+            pressureLedConfig.inner_color_ = QColor(250, 156, 28, 255);
+        }
+        else if(msg.data > 0){
+            pressureLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+        } else {
+            //pressure drop so flash red
+            if (redFlash) {
+                pressureLedConfig.inner_color_ = QColor(255, 0, 0, 255);  // Flash red
+                redFlash = false;
+            }
+            else {
+                pressureLedConfig.inner_color_ = QColor(252, 126, 0, 255);  // Flash orange
+                redFlash = true;
+            }
+        }
+
+        // Set node now if it wasn't earlier
+        if (!node)
+            node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+        updateCircle(pressureLedConfigId, pressureLedConfig);
+    }
+
     void DiagnosticOverlay::killCallback(const std_msgs::msg::Bool & msg){
         // get our local rosnode
         auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
@@ -297,6 +347,7 @@ namespace riptide_rviz
     }
 
     void DiagnosticOverlay::checkTimeout(){
+
         // read current timeout property and convert to duration
         auto timeoutDur = std::chrono::duration<double>(timeoutProperty->getFloat());
 
@@ -352,6 +403,17 @@ namespace riptide_rviz
 
             leakLedConfig.inner_color_ = QColor(255, 0, 255, 255);
             updateCircle(leakLedConfigId, leakLedConfig);
+        }
+
+        duration = node->get_clock()->now() - lastPressure;
+        if (duration > std::chrono::duration<double>(2.0s)) {
+            if (!pressureTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Pressure sensors timed out!");
+                pressureTimedOut = true;
+            }
+
+            pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+            updateCircle(pressureLedConfigId, pressureLedConfig);
         }
     }
 

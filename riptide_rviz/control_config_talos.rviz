@@ -116,7 +116,7 @@ Visualization Manager:
       robot_namespace: /talos
       ver_alignment: top
       ver_dist: 0
-      width: 128
+      width: 170
     - Class: rviz_default_plugins/TF
       Enabled: false
       Frame Timeout: 15

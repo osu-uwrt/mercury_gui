@@ -8,6 +8,7 @@
 #include <std_msgs/msg/bool.hpp>
 #include <sensor_msgs/msg/temperature.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <riptide_msgs2/msg/electrical_command.hpp>
 
 #include <rviz_common/properties/string_property.hpp>
@@ -34,6 +35,7 @@ namespace riptide_rviz
         void killCallback(const std_msgs::msg::Bool & msg);
         void zedCallback(const sensor_msgs::msg::Temperature& msg);
         void leakCallback(const std_msgs::msg::Bool& msg);
+        void pressureCallback(const std_msgs::msg::Float32& msg);
 
         void checkTimeout();
 
@@ -47,9 +49,10 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastLeak;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, leakTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastLeak, lastPressure;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, leakTimedOut, pressureTimedOut;
         bool startedLeaking = false;
+        bool redFlash = true;
 
 
         // subscription for diagnostics
@@ -57,6 +60,7 @@ namespace riptide_rviz
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr killSub;
         rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr zedSub;
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr leakSub;
+        rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pressureSub;
 
         // Battery kill publisher
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
@@ -67,6 +71,7 @@ namespace riptide_rviz
         int killLedConfigId = -1;
         int zedLedConfigId = -1;
         int leakLedConfigId = -1;
+        int pressureLedConfigId = -1;
 
         // font configuration info
         QStringList fontFamilies;
@@ -98,11 +103,18 @@ namespace riptide_rviz
             QColor(255, 0, 255, 255),
             QColor(0, 0, 0, 255)
         };
+        PaintedCircleConfig pressureLedConfig = {
+            140, 50, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
         PaintedTextConfig voltageConfig = {
             12, 0, 0, 0, "00.00 V",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
+
+
 
     };
 } // namespace riptide_rviz
