@@ -67,6 +67,7 @@ namespace riptide_rviz
 
         // ids for rendering items so that we can edit them
         int voltageTextId = -1;
+        int pvtTextId = -1;
         int diagLedConfigId = -1;
         int killLedConfigId = -1;
         int zedLedConfigId = -1;
@@ -110,6 +111,11 @@ namespace riptide_rviz
         };
         PaintedTextConfig voltageConfig = {
             12, 0, 0, 0, "00.00 V",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
+        PaintedTextConfig pvtConfig = {
+            90, 0, 0, 0, "0.000000",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };

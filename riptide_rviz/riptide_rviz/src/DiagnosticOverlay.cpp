@@ -57,7 +57,7 @@ namespace riptide_rviz
             zedTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::zedCallback, this, _1)
         );
 
-        std::string pressureTopic = robotNsProperty->getStdString() + "/state/pressure";
+        std::string pressureTopic = robotNsProperty->getStdString() + "/state/pvt";
         pressureSub = node->create_subscription<std_msgs::msg::Float32>(
             pressureTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::pressureCallback, this, _1)
         );
@@ -78,6 +78,9 @@ namespace riptide_rviz
         // add all of the variable design items
         voltageConfig.text_color_ = QColor(255, 0, 255, 255);
         voltageTextId = addText(voltageConfig);
+
+        pvtConfig.text_color_ = QColor(255, 0, 255, 255);
+        pvtTextId = addText(pvtConfig);
 
         diagLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         diagLedConfigId = addCircle(diagLedConfig);
@@ -111,7 +114,7 @@ namespace riptide_rviz
             QColor(255, 255, 255, 255)
         };
         PaintedTextConfig pressureLedLabel = {
-            127, 20, 0, 0, "Pres",
+            127, 20, 0, 0, "PVT",
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
@@ -126,6 +129,7 @@ namespace riptide_rviz
         addText(zedLedLabel);
         addText(pressureLedLabel);
         addText(leakLedLabel);
+        
     }
 
     void DiagnosticOverlay::updateNS(){
@@ -298,6 +302,10 @@ namespace riptide_rviz
             }
         }
 
+        //update the pvt text
+        std::string pvt_text = std::to_string(msg.data);
+        pvtConfig.text_ = pvt_text;
+
         // Set node now if it wasn't earlier
         if (!node)
             node = context_->getRosNodeAbstraction().lock()->get_raw_node();
@@ -406,7 +414,7 @@ namespace riptide_rviz
         }
 
         duration = node->get_clock()->now() - lastPressure;
-        if (duration > std::chrono::duration<double>(2.0s)) {
+        if (duration > std::chrono::duration<double>(30.0s)) {
             if (!pressureTimedOut) {
                 RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Pressure sensors timed out!");
                 pressureTimedOut = true;
@@ -414,6 +422,9 @@ namespace riptide_rviz
 
             pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
             updateCircle(pressureLedConfigId, pressureLedConfig);
+
+            pvtConfig.text_color_ = QColor(255, 0, 255, 255);
+            updateText(pvtTextId, pvtConfig);
         }
     }
 
