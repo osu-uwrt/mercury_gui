@@ -8,6 +8,7 @@
 #include <std_msgs/msg/bool.hpp>
 #include <sensor_msgs/msg/temperature.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <riptide_msgs2/msg/electrical_command.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
 
@@ -36,6 +37,7 @@ namespace riptide_rviz
         void zedCallback(const sensor_msgs::msg::Temperature& msg);
         void leakCallback(const std_msgs::msg::Bool& msg);
         void gyroCallback(const riptide_msgs2::msg::GyroStatus& msg);
+        void pressureCallback(const std_msgs::msg::Float32& msg);
 
         void checkTimeout();
 
@@ -49,9 +51,11 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastLeak, lastGyro;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, leakTimedOut, gyroTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastLeak, lastGyro, lastPressure;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut;
+
         bool startedLeaking = false;
+        bool redFlash = true;
 
         // subscription for diagnostics
         rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
@@ -59,16 +63,19 @@ namespace riptide_rviz
         rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr zedSub;
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr leakSub;
         rclcpp::Subscription<riptide_msgs2::msg::GyroStatus>::SharedPtr gyroSub;
+        rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pressureSub;
 
         // Battery kill publisher
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
         
         // ids for rendering items so that we can edit them
         int voltageTextId = -1;
+        int pvtTextId = -1;
         int diagLedConfigId = -1;
         int killLedConfigId = -1;
         int zedLedConfigId = -1;
         int leakLedConfigId = -1;
+        int pressureLedConfigId = -1;
 
         // font configuration info
         QStringList fontFamilies;
@@ -104,11 +111,23 @@ namespace riptide_rviz
             QColor(255, 0, 255, 255),
             QColor(0, 0, 0, 255)
         };
+        PaintedCircleConfig pressureLedConfig = {
+            140, 50, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
         PaintedTextConfig voltageConfig = {
             12, 0, 0, 0, "00.00 V",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
+        PaintedTextConfig pvtConfig = {
+            90, 0, 0, 0, "0.000000",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
+
+
 
         // Gauge display elements
         PaintedArcConfig tempGaugeArc{

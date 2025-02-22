@@ -35,6 +35,8 @@ find_package(Qt5 COMPONENTS Widgets Core REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(resource_retriever REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
+find_package(robot_localization REQUIRED)
+
 
 # Qt5 boilerplate options from http://doc.qt.io/qt-5/cmake-manual.html
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -104,6 +106,7 @@ set(deps
   chameleon_tf_msgs
   interactive_markers
   riptide_meshes
+  robot_localization
 )
 
 if(zed_interfaces_FOUND)

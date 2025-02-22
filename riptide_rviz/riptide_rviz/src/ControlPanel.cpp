@@ -8,6 +8,7 @@
 #include <iostream>
 #include <QMessageBox>
 #include <signal.h>
+#include <yaml-cpp/yaml.h>
 #include <string>
 
 
@@ -106,6 +107,9 @@ namespace riptide_rviz
         connect(uiPanel->dragStop, &QPushButton::clicked, this, &ControlPanel::handleStopDragCal);
         connect(uiPanel->dragTrigger, &QPushButton::clicked, this, &ControlPanel::handleTriggerDragCal);
 
+        //connect simulator apply
+        connect(uiPanel->simulation_apply, &QPushButton::clicked, this, &ControlPanel::simulator_apply_clickec);
+
         RVIZ_COMMON_LOG_INFO("ControlPanel: Initialized panel");
     }
 
@@ -185,6 +189,7 @@ namespace riptide_rviz
         #endif
         
         dragCalTriggerPub = node->create_publisher<std_msgs::msg::Empty>(robot_ns + "/trigger", rclcpp::SystemDefaultsQoS());
+        clawObjectPub = node->create_publisher<std_msgs::msg::String>(robot_ns + "/simulator/loaded_claw_object", rclcpp::SystemDefaultsQoS());
 
         // make ROS Subscribers
         odomSub = node->create_subscription<nav_msgs::msg::Odometry>(
@@ -208,6 +213,8 @@ namespace riptide_rviz
 
         //initialize telop server
         setTeleopClient = node->create_client<SetBool>(robot_ns + "/setTeleop");
+
+        setSimPoseClient = node->create_client<SetPose>(robot_ns+"/set_sim_pose");
         
         interactiveSetpointMarker.header.frame_id = "world",
         interactiveSetpointMarker.header.stamp = node->get_clock()->now();
@@ -288,6 +295,33 @@ namespace riptide_rviz
 
         this->lastCommandedPose.position = linear;
         this->lastCommandedPose.orientation = tf2::toMsg(quat);
+
+        //add none as an option to claw object dropdown
+        uiPanel->claw_object->addItem("None");
+
+        //load in objects from simulator yaml
+        std::string simulator_config_file;
+        node->declare_parameter("simulator_config", "");
+        if(node->get_parameter("simulator_config", simulator_config_file)){
+            try
+            {
+                RVIZ_COMMON_LOG_INFO("Loading simulator config at:!");
+                
+                //load yaml
+                YAML::Node simulator_config = YAML::LoadFile(simulator_config_file);
+
+                //iterate through simulator objects to create lists
+                for(auto ti = simulator_config["claw"]["fake_objects"].begin(); ti != simulator_config["claw"]["fake_objects"].end(); ti++){
+                    uiPanel->claw_object->addItem(ti->first.as<std::string>().c_str());
+                }
+            }
+            catch(const std::exception& e)
+            {
+                RVIZ_COMMON_LOG_WARNING("Could not find simualtor config - Its OK...");
+            }
+            
+        }
+
         RVIZ_COMMON_LOG_INFO("ControlPanel: Loading config complete");
     }
 
@@ -1166,6 +1200,33 @@ namespace riptide_rviz
         clientSendTime = node->get_clock()->now();
     }
 
+    void ControlPanel::callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose){
+        //check to ensure service is availabl
+        if(!client->wait_for_service(5s)){
+            return;
+        }
+
+        SetPose::Request::SharedPtr request = std::make_shared<SetPose::Request>();
+
+        //fill out request
+        request->pose.pose.pose.position.x = pose[0];
+        request->pose.pose.pose.position.y = pose[1];
+        request->pose.pose.pose.position.z = pose[2];        
+        request->pose.pose.pose.orientation.x = pose[0];
+        request->pose.pose.pose.orientation.y = pose[1];
+        request->pose.pose.pose.orientation.z = pose[2];
+        request->pose.pose.pose.orientation.w = pose[3];
+
+        //send request
+        auto future = client->async_send_request(request);
+        srvReqId = future.request_id;
+        activeSetPoseClientFuture = future.share();
+        QTimer::singleShot(250, 
+            [this, client] () { ControlPanel::waitForSetPoseResponse(client); });
+        auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+        clientSendTime = node->get_clock()->now();
+    }
+
 
     void ControlPanel::waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client)
     {
@@ -1230,6 +1291,34 @@ namespace riptide_rviz
             [this, client] () { ControlPanel::waitForSetBoolResponse(client); });
     }
 
+    void ControlPanel::waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client){
+        if(!activeSetPoseClientFuture.valid())
+        {
+            return;
+        }
+
+        auto futureStatus = activeSetPoseClientFuture.wait_for(10ms);
+        if(futureStatus != std::future_status::timeout)
+        {
+            //success
+            rclcpp::Client<SetPose>::SharedResponse response = activeSetPoseClientFuture.get();
+            return;
+        }
+
+        //not ready yet
+        auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+        rclcpp::Time currentTime = node->get_clock()->now();
+        if(currentTime - clientSendTime > 5s)
+        {
+            client->remove_pending_request(srvReqId);
+            return;
+        }
+
+        //schedule next check
+        QTimer::singleShot(250, 
+            [this, client] () { ControlPanel::waitForSetPoseResponse(client); });
+    }
+
 
     void ControlPanel::setDragCalRunning(bool running)
     {
@@ -1269,6 +1358,20 @@ namespace riptide_rviz
         }
 
         setDragCalRunning(false);
+    }
+
+    void ControlPanel::simulator_apply_clickec(){
+        //zero the sim
+        if(uiPanel->zero_simulator->isChecked()){
+
+            //uncheck the box
+            uiPanel->zero_simulator->setChecked(false);
+        }
+
+        //handle combo box
+        std_msgs::msg::String msg;
+        msg.data = uiPanel->claw_object->currentText().toStdString().c_str();
+        clawObjectPub->publish(msg);
     }
 
 } // namespace riptide_rviz

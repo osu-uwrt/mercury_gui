@@ -15,6 +15,12 @@ config = PathJoinSubstitution([
         LC("robot_yaml")
     ])
 
+simulation_config = PathJoinSubstitution([
+        get_package_share_directory('riptide_descriptions2'),
+        'config',
+        'simulator.yaml'
+    ])
+
 rviz_pkg_dir = get_package_share_directory('riptide_rviz')
 
 riptide_rviz_src = os.path.join(rviz_pkg_dir[: rviz_pkg_dir.find("install") - 1], "src", "riptide_gui", "riptide_rviz")
@@ -44,6 +50,9 @@ def generate_launch_description():
                     # DONT USE IT RENAMES ALL OF THE CHILD NODES CREATED FOR THE PLUGINS
                     # name='riptide_rviz', 
                     on_exit=Shutdown(),
+                    parameters=[
+                        {"simulator_config": simulation_config}
+                    ],
                     arguments=[
                         "-d", 
                         PathJoinSubstitution([
