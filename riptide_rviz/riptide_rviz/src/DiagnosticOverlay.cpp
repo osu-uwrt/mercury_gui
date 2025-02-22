@@ -481,6 +481,7 @@ namespace riptide_rviz
             
             updateArc(tempGaugeIndicatorId, tempGaugeIndicator);
             updateText(tempTextId, tempTextConfig);
+        }
 
         duration = node->get_clock()->now() - lastPressure;
         if (duration > std::chrono::duration<double>(30.0s)) {
