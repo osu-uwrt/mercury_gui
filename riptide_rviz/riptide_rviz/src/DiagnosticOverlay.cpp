@@ -333,6 +333,8 @@ namespace riptide_rviz
         if (!node)
             node = context_->getRosNodeAbstraction().lock()->get_raw_node();
 
+        lastPressure = node->get_clock()->now();
+
         updateCircle(pressureLedConfigId, pressureLedConfig);
     }
 
