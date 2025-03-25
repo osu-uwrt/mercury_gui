@@ -8,6 +8,7 @@
 #include <riptide_msgs2/msg/imu_config.hpp>
 #include <riptide_msgs2/action/mag_cal.hpp>
 #include <riptide_msgs2/action/tare_gyro.hpp>
+#include <riptide_msgs2/action/depressurize.hpp>
 
 #include "ui_ElectricalPanel.h"
 
@@ -15,7 +16,8 @@ namespace riptide_rviz
 {
     const static std::string 
         MAG_CAL_ACTION_NAME = "/vectornav/mag_cal",
-        TARE_GYRO_ACTION_NAME = "/gyro/tare";
+        TARE_GYRO_ACTION_NAME = "/gyro/tare",
+        DEPRESSURIZE_ACTION_NAME = "/depressurize";
 
     class ElectricalPanel : public rviz_common::Panel
     {
@@ -26,6 +28,10 @@ namespace riptide_rviz
         using TareGyro = riptide_msgs2::action::TareGyro;
         using TareGyroSendGoalOptions = rclcpp_action::Client<TareGyro>::SendGoalOptions;
         using TareGyroGoalHandle = rclcpp_action::Client<TareGyro>::GoalHandle;
+
+        using Depressurize = riptide_msgs2::action::Depressurize;
+        using DepressurizeSendGoalOptions = rclcpp_action::Client<Depressurize>::SendGoalOptions;
+        using DepressurizeGoalHandle = rclcpp_action::Client<Depressurize>::GoalHandle;
 
         Q_OBJECT
         public:
@@ -38,8 +44,13 @@ namespace riptide_rviz
 
         private Q_SLOTS:
         void sendElectricalCommand();
+        void sendDepressurizationCommand();
         void sendMagCal();
         void sendTareGyro();
+
+        void depressurizeGoalResponseCb(const DepressurizeGoalHandle::SharedPtr & goal_handle);
+        void depressurizeFeedbackCb(DepressurizeGoalHandle::SharedPtr, const std::shared_ptr<const Depressurize::Feedback> feedback);
+        void depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result);
 
         private:
         void setStatus(const QString& status, bool error);
@@ -63,9 +74,11 @@ namespace riptide_rviz
         // mag cal vars
         bool 
             imuCalInProgress = false,
-            gyroTareInProgress = false;
+            gyroTareInProgress = false,
+            depressurizationInProgress = false;
             
         double maxVar = 0.0;
+        double netDepressurization = 100000;
 
         // Continuous mag cal vars
         bool imuHsiEnable = false;
@@ -75,6 +88,7 @@ namespace riptide_rviz
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr pub;
         rclcpp_action::Client<MagCal>::SharedPtr imuCalClient;
         rclcpp_action::Client<TareGyro>::SharedPtr tareGyroClient;
+        rclcpp_action::Client<Depressurize>::SharedPtr depressurizeClient;
         
         rclcpp::Publisher<riptide_msgs2::msg::ImuConfig>::SharedPtr writeImuConfig;
         rclcpp::Subscription<riptide_msgs2::msg::ImuConfig>::SharedPtr readImuConfig;
