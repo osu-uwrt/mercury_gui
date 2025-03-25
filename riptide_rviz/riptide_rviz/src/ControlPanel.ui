@@ -734,7 +734,7 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
        </rect>
       </property>
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Minimum">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>100</horstretch>
         <verstretch>200</verstretch>
        </sizepolicy>
@@ -934,7 +934,7 @@ QPushButton:!enabled{color: white; background: rgb(100, 130, 110);}</string>
           </rect>
          </property>
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
