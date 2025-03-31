@@ -135,6 +135,12 @@ namespace riptide_rviz
         double percent_depressurized = 100* feedback->current_pressure / netDepressurization;
         
         ui->calibProgress->setValue((int) percent_depressurized);
+
+        if( percent_depressurized > 99.999){
+            //if fully depressurized, show message to have user pull pump
+
+            setStatus("Please remove the pump and replace the plug. Rather quickly if you will!", true);
+        }
     }
 
     void ElectricalPanel::depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result){
