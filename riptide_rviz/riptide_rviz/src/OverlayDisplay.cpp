@@ -73,7 +73,7 @@ namespace riptide_rviz {
         ver_alignment_property_->addOption("center", (int)VerticalAlignment::CENTER);
         ver_alignment_property_->addOption("bottom", (int)VerticalAlignment::BOTTOM);
 
-        width_property_ = new rviz_common::properties::IntProperty("width", 400, "width position", this, SLOT(updateWidth()));
+        width_property_ = new rviz_common::properties::IntProperty("width", 600, "width position", this, SLOT(updateWidth()));
         width_property_->setMin(0);
         height_property_ = new rviz_common::properties::IntProperty("height", 200, "height position", this, SLOT(updateHeight()));
         height_property_->setMin(0);
