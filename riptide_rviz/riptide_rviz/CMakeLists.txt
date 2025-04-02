@@ -25,7 +25,7 @@ find_package(chameleon_tf_msgs REQUIRED)
 find_package(interactive_markers REQUIRED)
 find_package(riptide_meshes REQUIRED)
 
-find_package(zed_interfaces QUIET) #not required because we will handle it if we cant find this. Its only installed on certain computers
+find_package(zed_msgs QUIET) #not required because we will handle it if we cant find this. Its only installed on certain computers
 
 # rviz specific deps
 find_package(rviz_common REQUIRED)
@@ -109,14 +109,14 @@ set(deps
   robot_localization
 )
 
-if(zed_interfaces_FOUND)
+if(zed_msgs_FOUND)
   set(deps
     ${deps}
-    zed_interfaces
+    zed_msgs
   )
   
   target_compile_definitions(${PROJECT_NAME} PUBLIC
-    USE_ZED_INTERFACES)
+    USE_ZED_MSGS)
 endif()
 
 ament_target_dependencies(${PROJECT_NAME} 

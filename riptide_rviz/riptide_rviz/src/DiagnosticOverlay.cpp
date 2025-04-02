@@ -44,6 +44,7 @@ namespace riptide_rviz
         lastDiag = node->get_clock()->now() - 1h;
         lastKill = node->get_clock()->now() - 1h;
         lastZed = node->get_clock()->now() - 1h;
+        lastDfc = node->get_clock()->now() - 1h;
         lastLeak = node->get_clock()->now() - 1h;
         lastGyro = node->get_clock()->now() - 1h;
 
@@ -62,9 +63,14 @@ namespace riptide_rviz
             "/diagnostics_agg", rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::diagnosticCallback, this, _1)
         );
 
-        std::string zedTopic = robotNsProperty->getStdString() + "/zed/ffc/zed_node/temperature/imu";
+        std::string zedTopic = robotNsProperty->getStdString() + "/ffc/zed_node/temperature/imu";
         zedSub = node->create_subscription<sensor_msgs::msg::Temperature>(
             zedTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::zedCallback, this, _1)
+        );
+
+        std::string dfcTopic = robotNsProperty->getStdString() + "/dfc/zed_node/temperature/imu";
+        dfcSub = node->create_subscription<sensor_msgs::msg::Temperature>(
+            dfcTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::dfcCallback, this, _1)
         );
 
         std::string pressureTopic = robotNsProperty->getStdString() + "/state/pvt";
@@ -101,6 +107,9 @@ namespace riptide_rviz
         zedLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         zedLedConfigId = addCircle(zedLedConfig);
 
+        dfcLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        dfcLedConfigId = addCircle(dfcLedConfig);
+
         pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         pressureLedConfigId = addCircle(pressureLedConfig);
 
@@ -118,13 +127,18 @@ namespace riptide_rviz
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
-        PaintedTextConfig zedLedLabel = {
-            87, 20, 0, 0, "Zed",
+        PaintedTextConfig ffcLedLabel = {
+            87, 20, 0, 0, "FFC",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+        PaintedTextConfig dfcLedLabel = {
+            127, 20, 0, 0, "DFC",
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
         PaintedTextConfig pressureLedLabel = {
-            127, 20, 0, 0, "PVT",
+            167, 20, 0, 0, "PVT",
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
@@ -149,10 +163,10 @@ namespace riptide_rviz
         addText(tempLabel);
         addText(diagLedLabel);
         addText(killLedLabel);
-        addText(zedLedLabel);
+        addText(ffcLedLabel);
+        addText(dfcLedLabel);
         addText(pressureLedLabel);
         addText(leakLedLabel);
-        
     }
 
     void DiagnosticOverlay::updateNS(){
@@ -230,6 +244,7 @@ namespace riptide_rviz
         }
     }
 
+    // Callback for the FFC indicator
     void DiagnosticOverlay::zedCallback(const sensor_msgs::msg::Temperature& msg) {
         // get our local rosnode
         auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
@@ -240,6 +255,15 @@ namespace riptide_rviz
         updateCircle(zedLedConfigId, zedLedConfig);
 
         lastZed = node->get_clock()->now();
+    }
+
+    // Callback for DFC indicator
+    void DiagnosticOverlay::dfcCallback(const sensor_msgs::msg::Temperature& msg) {
+        auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+        dfcTimedOut = false;
+        dfcLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+        updateCircle(dfcLedConfigId, dfcLedConfig);
+        lastDfc = node->get_clock()->now();
     }
 
     void DiagnosticOverlay::leakCallback(const std_msgs::msg::Bool& msg) {
@@ -332,6 +356,8 @@ namespace riptide_rviz
         // Set node now if it wasn't earlier
         if (!node)
             node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+        lastPressure = node->get_clock()->now();
 
         updateCircle(pressureLedConfigId, pressureLedConfig);
     }
@@ -448,12 +474,23 @@ namespace riptide_rviz
         duration = node->get_clock()->now() - lastZed;
         if (duration > std::chrono::duration<double>(1.0f)) {
             if (!zedTimedOut) {
-                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Zed connection timed out!");
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: FFC connection timed out!");
                 zedTimedOut = true;
             }
 
             zedLedConfig.inner_color_ = QColor(255, 0, 0, 255);
             updateCircle(zedLedConfigId, zedLedConfig);
+        }
+
+        // Timeout check for DFC indicator
+        duration = node->get_clock()->now() - lastDfc;
+        if (duration > std::chrono::duration<double>(1.0f)) {
+            if (!dfcTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: DFC connection timed out!");
+                dfcTimedOut = true;
+            }
+            dfcLedConfig.inner_color_ = QColor(255, 0, 0, 255);
+            updateCircle(dfcLedConfigId, dfcLedConfig);
         }
 
         duration = node->get_clock()->now() - lastLeak;
@@ -481,6 +518,7 @@ namespace riptide_rviz
             
             updateArc(tempGaugeIndicatorId, tempGaugeIndicator);
             updateText(tempTextId, tempTextConfig);
+        }
 
         duration = node->get_clock()->now() - lastPressure;
         if (duration > std::chrono::duration<double>(30.0s)) {

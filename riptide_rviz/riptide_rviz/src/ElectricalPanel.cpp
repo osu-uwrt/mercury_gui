@@ -43,10 +43,12 @@ namespace riptide_rviz
         //make the action client for the imu mag cal
         std::string 
             fullMagCalActionName = robotNs.toStdString() + MAG_CAL_ACTION_NAME,
-            fullTareGyroActionName = robotNs.toStdString() + TARE_GYRO_ACTION_NAME;
+            fullTareGyroActionName = robotNs.toStdString() + TARE_GYRO_ACTION_NAME,
+            fullDepressurizeActionName = robotNs.toStdString() + DEPRESSURIZE_ACTION_NAME;
 
         imuCalClient = rclcpp_action::create_client<MagCal>(node, fullMagCalActionName);
         tareGyroClient = rclcpp_action::create_client<TareGyro>(node, fullTareGyroActionName);
+        depressurizeClient = rclcpp_action::create_client<Depressurize>(node, fullDepressurizeActionName);
         loaded = true;
     }
 
@@ -63,6 +65,7 @@ namespace riptide_rviz
         connect(ui->commandSend, &QPushButton::clicked, this, &ElectricalPanel::sendElectricalCommand);
         connect(ui->magCalSend, &QPushButton::clicked, this, &ElectricalPanel::sendMagCal);
         connect(ui->commandTareFog, &QPushButton::clicked, this, &ElectricalPanel::sendTareGyro);
+        connect(ui->PVTButton, &QPushButton::clicked, this, &ElectricalPanel::sendDepressurizationCommand);
 
         //initial UI state
         ui->calibProgress->setValue(0);
@@ -70,6 +73,98 @@ namespace riptide_rviz
         ui->magCalSend->setText("Calibrate");
     }
 
+
+    void ElectricalPanel::sendDepressurizationCommand(){
+        if(!loaded)
+        {
+            setStatus("Panel not loaded! Please save your config and restart RViz", true);
+            return;
+        }
+
+        if(depressurizationInProgress){
+            depressurizeClient->async_cancel_all_goals();
+            setStatus("Cancelling Depressurization - Please allow air back into AUV before restarting!", true);
+            return;
+        }
+        depressurizationInProgress = true;
+
+
+        if(imuCalInProgress || imuCalInProgress){
+            setStatus("Already running a different calibration! Not doin it chief...", true);
+            return;
+        }
+
+        // make sure the depressurization server is online
+        if(!depressurizeClient->wait_for_action_server(1s)){
+            setStatus("Pressure Server Unavailable!", true);
+            return;
+        }
+
+        //set UI to zero percent complete
+        ui->calibProgress->setValue(0);
+
+        //get values from samples
+        double sampleTime = ui->PVTSampleTime->value();
+        netDepressurization = ui->PVTDepressurization->value();
+
+        if(netDepressurization > .3){
+            setStatus("You gonna break Talos! Cancelling! P.S. If for whatever cursed reason you do in fact need to lower the pressure this far, get send the action from the command line! But, be carefull, the electronics should be exposed to a pressure no less than .7bar", true);
+            return;
+        }
+
+        Depressurize::Goal depressurize_goal;
+        depressurize_goal.sampling_time = sampleTime;
+        depressurize_goal.net_depressuization = netDepressurization;
+
+        DepressurizeSendGoalOptions options;
+        options.goal_response_callback  = std::bind(&ElectricalPanel::depressurizeGoalResponseCb, this, _1);
+        options.feedback_callback       = std::bind(&ElectricalPanel::depressurizeFeedbackCb, this, _1, _2);
+        options.result_callback         = std::bind(&ElectricalPanel::depressurizeResultCb, this, _1);
+
+        depressurizeClient->async_send_goal(depressurize_goal, options);
+        setStatus("Sent goal!", true);
+
+        ui->PVTButton->setText("Cancel");
+    }
+
+    void ElectricalPanel::depressurizeGoalResponseCb(const DepressurizeGoalHandle::SharedPtr & goal_handle){
+
+    }
+
+    void ElectricalPanel::depressurizeFeedbackCb(DepressurizeGoalHandle::SharedPtr, const std::shared_ptr<const Depressurize::Feedback> feedback){
+        double percent_depressurized = 100* feedback->current_pressure / netDepressurization;
+        
+        ui->calibProgress->setValue((int) percent_depressurized);
+
+        if( percent_depressurized > 99.999){
+            //if fully depressurized, show message to have user pull pump
+
+            setStatus("Please remove the pump and replace the plug. Rather quickly if you will!", true);
+        }
+    }
+
+    void ElectricalPanel::depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result){
+        switch(result.code)
+        {
+            case rclcpp_action::ResultCode::SUCCEEDED:
+                ui->calibProgress->setValue(100);
+                setStatus("Pressue Lowered", true);
+
+                break;
+            case rclcpp_action::ResultCode::ABORTED:
+                setStatus("Depressurization aborted", true);
+                break;
+            case rclcpp_action::ResultCode::CANCELED:
+                setStatus("Depressurization canceled!", false);
+                break;
+            case rclcpp_action::ResultCode::UNKNOWN:
+                setStatus("Uknown depressurization result recieved???", true);
+                break;
+        }
+
+        depressurizationInProgress = false;
+        ui->PVTButton->setText("Start PVT");
+    }
 
     void ElectricalPanel::sendElectricalCommand()
     {
@@ -96,6 +191,11 @@ namespace riptide_rviz
         if(imuCalInProgress){
             imuCalClient->async_cancel_all_goals();
             setStatus("Cancelling calibration request", false);
+            return;
+        }
+
+        if(depressurizationInProgress || gyroTareInProgress){
+            setStatus("Already running a different calibration! Not doin it chief...", true);
             return;
         }
 
@@ -132,6 +232,11 @@ namespace riptide_rviz
         if(gyroTareInProgress){
             tareGyroClient->async_cancel_all_goals();
             setStatus("Cancelling tare request", false);
+            return;
+        }
+                
+        if(depressurizationInProgress || imuCalInProgress){
+            setStatus("Already running a different calibration! Not doin it chief...", true);
             return;
         }
         
