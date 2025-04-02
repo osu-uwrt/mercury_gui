@@ -33,7 +33,7 @@ namespace riptide_rviz
         using Trigger = std_srvs::srv::Trigger;
 
         Q_OBJECT 
-        public:
+    public:
         MappingPanel(QWidget *parent = 0);
         ~MappingPanel();
 
@@ -41,7 +41,7 @@ namespace riptide_rviz
         void save(rviz_common::Config config) const override;
         void onInitialize() override;
 
-        private Q_SLOTS:
+    private Q_SLOTS:
         void calibMapFrame();
         void setMappingTarget();
         void zedSvoStart();
@@ -49,8 +49,11 @@ namespace riptide_rviz
         void dfcRecordStart();
         void dfcRecordStop();
 
-        private:
+    private:
         void setStatus(const QString& text, const QString &color);
+
+        void updateFfcRecordingIndicator(bool recording);
+        void updateDfcRecordingIndicator(bool recording);
 
         template<typename T>
         void serviceResponseCb(const std::string& srvName, typename rclcpp::Client<T>::SharedResponse response)
@@ -58,7 +61,8 @@ namespace riptide_rviz
             std::string successStr = (response->success ? "Succeeded" : "Failed");
 
             setStatus(QString::fromStdString("Call to %1 %2; %3").arg(
-                QString::fromStdString(srvName), QString::fromStdString(successStr), QString::fromStdString(response->message)),
+                QString::fromStdString(srvName), QString::fromStdString(successStr),
+                QString::fromStdString(response->message)),
                 (response->success ? "000000" : "FF0000"));
         }
 
@@ -69,7 +73,7 @@ namespace riptide_rviz
             const std::shared_ptr<const ModelFrame::Feedback> feedback);
         void resultCb(const CalibGoalHandle::WrappedResult & result);        
 
-        // mappingtarget stuff
+        // mapping target stuff
         void mappingStatusCb(const riptide_msgs2::msg::MappingTargetInfo::SharedPtr msg);
         void mappingObjectCb(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
         void mappingTargetResultCb(const std::string& srvName, rclcpp::Client<MappingTarget>::SharedResponse response);
