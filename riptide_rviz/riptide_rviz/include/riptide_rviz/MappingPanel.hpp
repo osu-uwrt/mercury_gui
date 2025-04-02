@@ -93,7 +93,5 @@ namespace riptide_rviz
             GuiSrvClient<StartSvoRec>::SharedPtr dfcStartSvoClient;
             GuiSrvClient<Trigger>::SharedPtr dfcStopSvoClient;
         #endif
-
-        //TODO add dfc clients
     };
 }
