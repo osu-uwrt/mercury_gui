@@ -5,8 +5,8 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <chameleon_tf_msgs/action/model_frame.hpp>
-#ifdef USE_ZED_INTERFACES
-    #include <zed_interfaces/srv/start_svo_rec.hpp>
+#ifdef USE_ZED_MSGS
+    #include <zed_msgs/srv/start_svo_rec.hpp>
 #endif
 #include <std_srvs/srv/trigger.hpp>
 #include <riptide_msgs2/msg/mapping_target_info.hpp>
@@ -27,8 +27,8 @@ namespace riptide_rviz
         using CalibGoalHandle = rclcpp_action::Client<ModelFrame>::GoalHandle;
 
         using MappingTarget = riptide_msgs2::srv::MappingTarget;
-        #ifdef USE_ZED_INTERFACES
-            using StartSvoRec = zed_interfaces::srv::StartSvoRec;
+        #ifdef USE_ZED_MSGS
+            using StartSvoRec = zed_msgs::srv::StartSvoRec;
         #endif
         using Trigger = std_srvs::srv::Trigger;
 
@@ -84,9 +84,14 @@ namespace riptide_rviz
         rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr mappingObjectSub;
         GuiSrvClient<MappingTarget>::SharedPtr mappingTargetClient;
 
-        #ifdef USE_ZED_INTERFACES
-            GuiSrvClient<StartSvoRec>::SharedPtr startSvoClient;
-            GuiSrvClient<Trigger>::SharedPtr stopSvoClient;
+        #ifdef USE_ZED_MSGS
+            // For ffc camera
+            GuiSrvClient<StartSvoRec>::SharedPtr ffcStartSvoClient;
+            GuiSrvClient<Trigger>::SharedPtr ffcStopSvoClient;
+        
+            // For dfc camera
+            GuiSrvClient<StartSvoRec>::SharedPtr dfcStartSvoClient;
+            GuiSrvClient<Trigger>::SharedPtr dfcStopSvoClient;
         #endif
 
         //TODO add dfc clients

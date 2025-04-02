@@ -60,13 +60,28 @@ namespace riptide_rviz
         calibClient = rclcpp_action::create_client<ModelFrame>(node, fullActionName);
         RVIZ_COMMON_LOG_INFO("Created action client for server with name \"" + fullActionName + "\"");
 
-        #if USE_ZED_INTERFACES
-            startSvoClient = std::make_shared<GuiSrvClient<StartSvoRec>>(node, robotNs + "/zed/zed_node/start_svo_rec", 
-                std::bind(&MappingPanel::setStatus, this, _1, _2), std::bind(&MappingPanel::serviceResponseCb<StartSvoRec>, this, _1, _2));
-
-            stopSvoClient = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/zed/zed_node/stop_svo_rec", 
-                std::bind(&MappingPanel::setStatus, this, _1, _2), std::bind(&MappingPanel::serviceResponseCb<Trigger>, this, _1, _2));
+        #ifdef USE_ZED_MSGS
+            ffcStartSvoClient = std::make_shared<GuiSrvClient<StartSvoRec>>(
+                node, robotNs + "/ffc/zed_node/start_svo_rec", 
+                std::bind(&MappingPanel::setStatus, this, _1, _2), 
+                std::bind(&MappingPanel::serviceResponseCb<StartSvoRec>, this, _1, _2));
+        
+            ffcStopSvoClient = std::make_shared<GuiSrvClient<Trigger>>(
+                node, robotNs + "/ffc/zed_node/stop_svo_rec", 
+                std::bind(&MappingPanel::setStatus, this, _1, _2), 
+                std::bind(&MappingPanel::serviceResponseCb<Trigger>, this, _1, _2));
+        
+            dfcStartSvoClient = std::make_shared<GuiSrvClient<StartSvoRec>>(
+                node, robotNs + "/dfc/zed_node/start_svo_rec", 
+                std::bind(&MappingPanel::setStatus, this, _1, _2), 
+                std::bind(&MappingPanel::serviceResponseCb<StartSvoRec>, this, _1, _2));
+        
+            dfcStopSvoClient = std::make_shared<GuiSrvClient<Trigger>>(
+                node, robotNs + "/dfc/zed_node/stop_svo_rec", 
+                std::bind(&MappingPanel::setStatus, this, _1, _2), 
+                std::bind(&MappingPanel::serviceResponseCb<Trigger>, this, _1, _2));
         #endif
+    
 
         // initialize mapping target stuff
         mappingTargetInfoSub = node->create_subscription<riptide_msgs2::msg::MappingTargetInfo>(robotNs + "/state/mapping", 10,
@@ -171,65 +186,103 @@ namespace riptide_rviz
 
     void MappingPanel::zedSvoStart()
     {
-        #ifdef USE_ZED_INTERFACES
-            QString rec_location = ui->recordDst->text();
-            if (rec_location.startsWith("~")) {
-                rec_location.replace(0, 1, "/home/ros");
-            }
-
-            if (!rec_location.endsWith(".svo"))
-            {
-                rec_location = rec_location + ".svo";
-            }
-
-            // Extract just the filename
-            QFileInfo fileInfo(rec_location);
-            QString fileName = fileInfo.fileName();
-
-            setStatus(QString("Recording SVO to %1").arg(fileName), "000000");
-
-            auto request = std::make_shared<zed_interfaces::srv::StartSvoRec::Request>();
-            request->bitrate = 0;
-            request->compression_mode = 0;  // LOSSLESS = 0
-            request->target_framerate = 0;
-            request->input_transcode = false;
-            request->svo_filename = rec_location.toStdString();  // Use absolute path
-
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Starting SVO recording with parameters:");
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Bitrate: %d", request->bitrate);
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Compression Mode: %d", request->compression_mode);
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Target Framerate: %d", request->target_framerate);
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input Transcode: %s", request->input_transcode ? "true" : "false");
-            RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "SVO Filename: %s", request->svo_filename.c_str());
-
-            startSvoClient->callService(request);
-        #else
-            QMessageBox::warning(ui->form, "Not Supported", "This feature is not available until you build rviz with zed_interfaces installed.");
-        #endif
+    #ifdef USE_ZED_MSGS
+        QString rec_location = ui->recordDst->text();
+        if (rec_location.startsWith("~")) {
+            rec_location.replace(0, 1, "/home/ros");
+        }
+        if (!rec_location.endsWith(".svo"))
+        {
+            rec_location = rec_location + ".svo";
+        }
+        // Extract just the filename for display
+        QFileInfo fileInfo(rec_location);
+        QString fileName = fileInfo.fileName();
+    
+        setStatus(QString("Recording SVO (FFC) to %1").arg(fileName), "000000");
+    
+        auto request = std::make_shared<zed_msgs::srv::StartSvoRec::Request>();
+        request->bitrate = 0;
+        request->compression_mode = 0;  // LOSSLESS = 0
+        request->target_framerate = 0;
+        request->input_transcode = false;
+        request->svo_filename = rec_location.toStdString();  // Use absolute path
+    
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Starting FFC SVO recording with parameters:");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Bitrate: %d", request->bitrate);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Compression Mode: %d", request->compression_mode);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Target Framerate: %d", request->target_framerate);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input Transcode: %s", request->input_transcode ? "true" : "false");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "SVO Filename: %s", request->svo_filename.c_str());
+    
+        // Use the FFC service client
+        ffcStartSvoClient->callService(request);
+    #else
+        QMessageBox::warning(ui->form, "Not Supported",
+            "This feature is not available until you build rviz with zed_msgs installed.");
+    #endif
     }
-
-
-
+    
     void MappingPanel::zedSvoStop()
     {
-        #ifdef USE_ZED_INTERFACES
-            stopSvoClient->callService(std::make_shared<std_srvs::srv::Trigger::Request>());
-        #else
-            QMessageBox::warning(ui->form, "Not Supported", "This feature is not available until you build rviz with zed_interfaces installed.");
-        #endif
+    #ifdef USE_ZED_MSGS
+        // Use the FFC stop service client
+        ffcStopSvoClient->callService(std::make_shared<std_srvs::srv::Trigger::Request>());
+    #else
+        QMessageBox::warning(ui->form, "Not Supported",
+            "This feature is not available until you build rviz with zed_msgs installed.");
+    #endif
     }
-
 
     void MappingPanel::dfcRecordStart()
     {
-        QMessageBox::warning(ui->form, "Not Implemented", "This feature is not implemented yet.");
+    #ifdef USE_ZED_MSGS
+        QString rec_location = ui->recordDst->text();
+        if (rec_location.startsWith("~")) {
+            rec_location.replace(0, 1, "/home/ros");
+        }
+        if (!rec_location.endsWith(".svo"))
+        {
+            rec_location = rec_location + ".svo";
+        }
+
+        // Extract just the filename for display
+        QFileInfo fileInfo(rec_location);
+        QString fileName = fileInfo.fileName();
+
+        setStatus(QString("Recording SVO (DFC) to %1").arg(fileName), "000000");
+
+        auto request = std::make_shared<zed_msgs::srv::StartSvoRec::Request>();
+        request->bitrate = 0;
+        request->compression_mode = 0;  // LOSSLESS = 0
+        request->target_framerate = 0;
+        request->input_transcode = false;
+        request->svo_filename = rec_location.toStdString();  // Use absolute path
+
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Starting DFC SVO recording with parameters:");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Bitrate: %d", request->bitrate);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Compression Mode: %d", request->compression_mode);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Target Framerate: %d", request->target_framerate);
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input Transcode: %s", request->input_transcode ? "true" : "false");
+        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "SVO Filename: %s", request->svo_filename.c_str());
+
+        dfcStartSvoClient->callService(request);
+    #else
+        QMessageBox::warning(ui->form, "Not Supported", "This feature is not available until you build rviz with zed_msgs installed.");
+    #endif
     }
+
 
 
     void MappingPanel::dfcRecordStop()
     {
-        QMessageBox::warning(ui->form, "Not Implemented", "This feature is not implemented yet.");
+    #ifdef USE_ZED_MSGS
+        dfcStopSvoClient->callService(std::make_shared<std_srvs::srv::Trigger::Request>());
+    #else
+        QMessageBox::warning(ui->form, "Not Supported", "This feature is not available until you build rviz with zed_msgs installed.");
+    #endif
     }
+    
 
 
     void MappingPanel::setStatus(const QString& text, const QString &color)
