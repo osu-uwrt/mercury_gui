@@ -159,13 +159,13 @@ namespace riptide_rviz
         int tempGaugeIndicatorId;
 
         PaintedTextConfig tempTextConfig{
-            85, 90,    // x, y pos
+            50, 110,    // x, y pos
             0, 0,       // offset
             "0.0°C",    // default text
             fontName,
             false,      // not bold
             2,          // outline width
-            12,         // font size
+            10,         // font size
             QColor(255, 255, 255, 255)  // white text
             };
         int tempTextId;
@@ -192,13 +192,13 @@ namespace riptide_rviz
         int cpuTempGaugeIndicatorId;
 
         PaintedTextConfig cpuTempTextConfig{
-            125, 90,    // x, y pos
+            90, 110,    // x, y pos
             0, 0,       // offset
             "0.0°C",    // default text
             fontName,
             false,      // not bold
             2,          // outline width
-            12,         // font size
+            10,         // font size
             QColor(255, 255, 255, 255)  // white text
         };
         int cpuTempTextId;

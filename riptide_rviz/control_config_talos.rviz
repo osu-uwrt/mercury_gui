@@ -146,7 +146,7 @@ Visualization Manager:
       Value: true
       diagnostic_timeout: 10
       font: DejaVu Sans Mono
-      height: 128
+      height: 200
       hor_alignment: left
       hor_dist: 0
       robot_namespace: /talos
