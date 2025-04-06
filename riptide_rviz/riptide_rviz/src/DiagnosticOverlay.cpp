@@ -254,49 +254,52 @@ namespace riptide_rviz
                 updateCircle(diagLedConfigId, diagLedConfig);
             }
 
-            else if(diagnostic.name.find("Core Temperature") != std::string::npos) {
+            else if(diagnostic.name == "/Robot Diagnostics/Computers/Core Temperature") {
                 lastCpuTemp = node->get_clock()->now();
                 cpuTempTimedOut = false;
                 
                 // Find the maximum temperature among cores
                 double max_temp = 0.0;
+                bool found_temp = false;
+                
                 for(auto pair : diagnostic.values) {
-                    if(pair.key.find("thermal") != std::string::npos) {
-                        try {
-                            // Extract temperature value (format: "XX.XX C")
-                            std::string temp_str = pair.value;
-                            size_t pos = temp_str.find(" C");
-                            if(pos != std::string::npos) {
-                                double temp = std::stod(temp_str.substr(0, pos));
-                                max_temp = std::max(max_temp, temp);
-                            }
-                        } catch(const std::exception& e) {
-                            // Handle parsing errors
-                            RVIZ_COMMON_LOG_ERROR_STREAM("Error parsing CPU temperature: " << e.what());
+                    try {
+                        // Extract temperature value (format: "XX.XX C")
+                        std::string temp_str = pair.value;
+                        size_t pos = temp_str.find(" C");
+                        if(pos != std::string::npos) {
+                            double temp = std::stod(temp_str.substr(0, pos));
+                            max_temp = std::max(max_temp, temp);
+                            found_temp = true;
                         }
+                    } catch(const std::exception& e) {
+                        // Handle parsing errors
+                        RVIZ_COMMON_LOG_ERROR_STREAM("Error parsing CPU temperature: " << e.what());
                     }
                 }
                 
-                // Update gauge indicator
-                double angleRange = 360.0;
-                double normalizedTemp = std::min(std::max(max_temp, 0.0), 100.0) / 100.0;  // 0-100 C range
-                double newAngle = 90.0 - (normalizedTemp * angleRange); // Start at top and go clockwise
-                cpuTempGaugeIndicator.end_angle_ = newAngle;
-                
-                // Update color based on temperature thresholds
-                if (max_temp > 85.0) {
-                    cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 0, 255);    // R
-                } else if (max_temp > 70.0) {
-                    cpuTempGaugeIndicator.line_color_ = QColor(255, 255, 0, 255);  // Y
-                } else {
-                    cpuTempGaugeIndicator.line_color_ = QColor(0, 255, 0, 255);    // G
+                if(found_temp) {
+                    // Update gauge indicator
+                    double angleRange = 360.0;
+                    double normalizedTemp = std::min(std::max(max_temp, 0.0), 100.0) / 100.0;  // 0-100 C range
+                    double newAngle = 90.0 - (normalizedTemp * angleRange); // Start at top and go clockwise
+                    cpuTempGaugeIndicator.end_angle_ = newAngle;
+                    
+                    // Update color based on temperature thresholds
+                    if (max_temp > 85.0) {
+                        cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 0, 255);    // Red
+                    } else if (max_temp > 70.0) {
+                        cpuTempGaugeIndicator.line_color_ = QColor(255, 255, 0, 255);  // Yellow
+                    } else {
+                        cpuTempGaugeIndicator.line_color_ = QColor(0, 255, 0, 255);    // Green
+                    }
+                    
+                    // Update text
+                    cpuTempTextConfig.text_ = QString::number(max_temp, 'f', 1).toStdString() + "°C";
+                    
+                    updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
+                    updateText(cpuTempTextId, cpuTempTextConfig);
                 }
-                
-                // Update text
-                cpuTempTextConfig.text_ = QString::number(max_temp, 'f', 1).toStdString() + "°C";
-                
-                updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
-                updateText(cpuTempTextId, cpuTempTextConfig);
             }
         }
     }
