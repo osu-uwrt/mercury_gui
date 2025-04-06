@@ -47,6 +47,7 @@ namespace riptide_rviz
         lastDfc = node->get_clock()->now() - 1h;
         lastLeak = node->get_clock()->now() - 1h;
         lastGyro = node->get_clock()->now() - 1h;
+        lastCpuTemp = node->get_clock()->now() - 1h;
 
         // sub to gyro status
         std::string gyroTopic = robotNsProperty->getStdString() + "/gyro/status";
@@ -154,10 +155,20 @@ namespace riptide_rviz
             QColor(255, 255, 255, 255)
         };
 
+        PaintedTextConfig cpuTempLabel = {
+            90, 70, 0, 0, "CPU",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+
         // init temperature gauge
         tempGaugeArcId = addArc(tempGaugeArc);
         tempGaugeIndicatorId = addArc(tempGaugeIndicator);
         tempTextId = addText(tempTextConfig);
+
+        cpuTempGaugeArcId = addArc(cpuTempGaugeArc);
+        cpuTempGaugeIndicatorId = addArc(cpuTempGaugeIndicator);
+        cpuTempTextId = addText(cpuTempTextConfig);
 
         // Labels
         addText(tempLabel);
@@ -167,6 +178,7 @@ namespace riptide_rviz
         addText(dfcLedLabel);
         addText(pressureLedLabel);
         addText(leakLedLabel);
+        addText(cpuTempLabel);
     }
 
     void DiagnosticOverlay::updateNS(){
@@ -240,6 +252,51 @@ namespace riptide_rviz
                 }
 
                 updateCircle(diagLedConfigId, diagLedConfig);
+            }
+
+            else if(diagnostic.name.find("Core Temperature") != std::string::npos) {
+                lastCpuTemp = node->get_clock()->now();
+                cpuTempTimedOut = false;
+                
+                // Find the maximum temperature among cores
+                double max_temp = 0.0;
+                for(auto pair : diagnostic.values) {
+                    if(pair.key.find("thermal") != std::string::npos) {
+                        try {
+                            // Extract temperature value (format: "XX.XX C")
+                            std::string temp_str = pair.value;
+                            size_t pos = temp_str.find(" C");
+                            if(pos != std::string::npos) {
+                                double temp = std::stod(temp_str.substr(0, pos));
+                                max_temp = std::max(max_temp, temp);
+                            }
+                        } catch(const std::exception& e) {
+                            // Handle parsing errors
+                            RVIZ_COMMON_LOG_ERROR_STREAM("Error parsing CPU temperature: " << e.what());
+                        }
+                    }
+                }
+                
+                // Update gauge indicator
+                double angleRange = 360.0;
+                double normalizedTemp = std::min(std::max(max_temp, 0.0), 100.0) / 100.0;  // 0-100 C range
+                double newAngle = 90.0 - (normalizedTemp * angleRange); // Start at top and go clockwise
+                cpuTempGaugeIndicator.end_angle_ = newAngle;
+                
+                // Update color based on temperature thresholds
+                if (max_temp > 85.0) {
+                    cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 0, 255);    // R
+                } else if (max_temp > 70.0) {
+                    cpuTempGaugeIndicator.line_color_ = QColor(255, 255, 0, 255);  // Y
+                } else {
+                    cpuTempGaugeIndicator.line_color_ = QColor(0, 255, 0, 255);    // G
+                }
+                
+                // Update text
+                cpuTempTextConfig.text_ = QString::number(max_temp, 'f', 1).toStdString() + "°C";
+                
+                updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
+                updateText(cpuTempTextId, cpuTempTextConfig);
             }
         }
     }
@@ -505,7 +562,7 @@ namespace riptide_rviz
         }
 
 
-      // Gyro timeout
+        // Gyro timeout
         duration = node->get_clock()->now() - lastGyro;
         if (duration > std::chrono::duration<double>(2.0)) {
             if (!gyroTimedOut) {
@@ -533,6 +590,20 @@ namespace riptide_rviz
             pvtConfig.text_color_ = QColor(255, 0, 255, 255);
             updateText(pvtTextId, pvtConfig);
 
+        }
+
+        duration = node->get_clock()->now() - lastCpuTemp;
+        if (duration > std::chrono::duration<double>(2.0)) {
+            if (!cpuTempTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: CPU temperature timed out!");
+                cpuTempTimedOut = true;
+            }
+            
+            cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 255, 255);
+            cpuTempTextConfig.text_ = "-.--°C";
+            
+            updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
+            updateText(cpuTempTextId, cpuTempTextConfig);
         }
     }
 
