@@ -5,12 +5,14 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <chameleon_tf_msgs/action/model_frame.hpp>
-#ifdef USE_ZED_INTERFACES
-    #include <zed_interfaces/srv/start_svo_rec.hpp>
+#ifdef USE_ZED_MSGS
+    #include <zed_msgs/srv/start_svo_rec.hpp>
 #endif
 #include <std_srvs/srv/trigger.hpp>
 #include <riptide_msgs2/msg/mapping_target_info.hpp>
 #include <riptide_msgs2/srv/mapping_target.hpp>
+
+#include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 
 #include "ui_MappingPanel.h"
 
@@ -25,13 +27,13 @@ namespace riptide_rviz
         using CalibGoalHandle = rclcpp_action::Client<ModelFrame>::GoalHandle;
 
         using MappingTarget = riptide_msgs2::srv::MappingTarget;
-        #ifdef USE_ZED_INTERFACES
-            using StartSvoRec = zed_interfaces::srv::StartSvoRec;
+        #ifdef USE_ZED_MSGS
+            using StartSvoRec = zed_msgs::srv::StartSvoRec;
         #endif
         using Trigger = std_srvs::srv::Trigger;
 
         Q_OBJECT 
-        public:
+    public:
         MappingPanel(QWidget *parent = 0);
         ~MappingPanel();
 
@@ -39,7 +41,7 @@ namespace riptide_rviz
         void save(rviz_common::Config config) const override;
         void onInitialize() override;
 
-        private Q_SLOTS:
+    private Q_SLOTS:
         void calibMapFrame();
         void setMappingTarget();
         void zedSvoStart();
@@ -47,8 +49,11 @@ namespace riptide_rviz
         void dfcRecordStart();
         void dfcRecordStop();
 
-        private:
+    private:
         void setStatus(const QString& text, const QString &color);
+
+        void updateFfcRecordingIndicator(bool recording);
+        void updateDfcRecordingIndicator(bool recording);
 
         template<typename T>
         void serviceResponseCb(const std::string& srvName, typename rclcpp::Client<T>::SharedResponse response)
@@ -56,7 +61,8 @@ namespace riptide_rviz
             std::string successStr = (response->success ? "Succeeded" : "Failed");
 
             setStatus(QString::fromStdString("Call to %1 %2; %3").arg(
-                QString::fromStdString(srvName), QString::fromStdString(successStr), QString::fromStdString(response->message)),
+                QString::fromStdString(srvName), QString::fromStdString(successStr),
+                QString::fromStdString(response->message)),
                 (response->success ? "000000" : "FF0000"));
         }
 
@@ -67,8 +73,9 @@ namespace riptide_rviz
             const std::shared_ptr<const ModelFrame::Feedback> feedback);
         void resultCb(const CalibGoalHandle::WrappedResult & result);        
 
-        // mappingtarget stuff
+        // mapping target stuff
         void mappingStatusCb(const riptide_msgs2::msg::MappingTargetInfo::SharedPtr msg);
+        void mappingObjectCb(const geometry_msgs::msg::PoseWithCovarianceStamped::SharedPtr msg);
         void mappingTargetResultCb(const std::string& srvName, rclcpp::Client<MappingTarget>::SharedResponse response);
 
         Ui_MappingPanel *ui;
@@ -78,13 +85,17 @@ namespace riptide_rviz
         
         rclcpp_action::Client<chameleon_tf_msgs::action::ModelFrame>::SharedPtr calibClient;
         rclcpp::Subscription<riptide_msgs2::msg::MappingTargetInfo>::SharedPtr mappingTargetInfoSub;
+        rclcpp::Subscription<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr mappingObjectSub;
         GuiSrvClient<MappingTarget>::SharedPtr mappingTargetClient;
 
-        #ifdef USE_ZED_INTERFACES
-            GuiSrvClient<StartSvoRec>::SharedPtr startSvoClient;
-            GuiSrvClient<Trigger>::SharedPtr stopSvoClient;
+        #ifdef USE_ZED_MSGS
+            // For ffc camera
+            GuiSrvClient<StartSvoRec>::SharedPtr ffcStartSvoClient;
+            GuiSrvClient<Trigger>::SharedPtr ffcStopSvoClient;
+        
+            // For dfc camera
+            GuiSrvClient<StartSvoRec>::SharedPtr dfcStartSvoClient;
+            GuiSrvClient<Trigger>::SharedPtr dfcStopSvoClient;
         #endif
-
-        //TODO add dfc clients
     };
 }

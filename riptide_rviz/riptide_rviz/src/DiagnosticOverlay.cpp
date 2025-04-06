@@ -1,6 +1,7 @@
 #include "riptide_rviz/DiagnosticOverlay.hpp"
 
 #include <QFontDatabase>
+#include <QMessageBox>
 
 #include <rviz_common/display_context.hpp>
 #include <rviz_common/logging.hpp>
@@ -20,7 +21,7 @@ namespace riptide_rviz
         }
 
         robotNsProperty = new rviz_common::properties::StringProperty(
-            "robot_namespace", "/tempest", "Robot namespace to attach to", this, SLOT(updateNS()));
+            "robot_namespace", "/talos", "Robot namespace to attach to", this, SLOT(updateNS()));
 
         timeoutProperty = new rviz_common::properties::FloatProperty(
             "diagnostic_timeout", 10.0, "Maximum time between diagnostic packets before default", this);
@@ -42,10 +43,50 @@ namespace riptide_rviz
         // backdate timeouts
         lastDiag = node->get_clock()->now() - 1h;
         lastKill = node->get_clock()->now() - 1h;
+        lastZed = node->get_clock()->now() - 1h;
+        lastDfc = node->get_clock()->now() - 1h;
+        lastLeak = node->get_clock()->now() - 1h;
+        lastGyro = node->get_clock()->now() - 1h;
+        lastCpuTemp = node->get_clock()->now() - 1h;
 
-        // make the diagnostic subscriber
+        // sub to gyro status
+        std::string gyroTopic = robotNsProperty->getStdString() + "/gyro/status";
+        gyroSub = node->create_subscription<riptide_msgs2::msg::GyroStatus>(
+            gyroTopic,
+            rclcpp::SystemDefaultsQoS(),
+            std::bind(&DiagnosticOverlay::gyroCallback, this, _1)
+        );
+      
+        lastPressure = node->get_clock()->now() - 1h;
+
+        // subs
         diagSub = node->create_subscription<diagnostic_msgs::msg::DiagnosticArray>(
             "/diagnostics_agg", rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::diagnosticCallback, this, _1)
+        );
+
+        std::string zedTopic = robotNsProperty->getStdString() + "/ffc/zed_node/temperature/imu";
+        zedSub = node->create_subscription<sensor_msgs::msg::Temperature>(
+            zedTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::zedCallback, this, _1)
+        );
+
+        std::string dfcTopic = robotNsProperty->getStdString() + "/dfc/zed_node/temperature/imu";
+        dfcSub = node->create_subscription<sensor_msgs::msg::Temperature>(
+            dfcTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::dfcCallback, this, _1)
+        );
+
+        std::string pressureTopic = robotNsProperty->getStdString() + "/state/pvt";
+        pressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            pressureTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::pressureCallback, this, _1)
+        );
+
+        std::string leakTopic = robotNsProperty->getStdString() + "/state/leak";
+        leakSub = node->create_subscription<std_msgs::msg::Bool>(
+            leakTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::leakCallback, this, _1)
+        );
+
+        std::string batteryKillTopic = robotNsProperty->getStdString() + "/command/electrical";
+        batteryKillPub = node->create_publisher<riptide_msgs2::msg::ElectricalCommand>(
+            batteryKillTopic, 10  // 10 prevents mismatched QoS
         );
 
         // watchdog timers for handling timeouts
@@ -55,11 +96,26 @@ namespace riptide_rviz
         voltageConfig.text_color_ = QColor(255, 0, 255, 255);
         voltageTextId = addText(voltageConfig);
 
+        pvtConfig.text_color_ = QColor(255, 0, 255, 255);
+        pvtTextId = addText(pvtConfig);
+
         diagLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         diagLedConfigId = addCircle(diagLedConfig);
 
         killLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         killLedConfigId = addCircle(killLedConfig);
+
+        zedLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        zedLedConfigId = addCircle(zedLedConfig);
+
+        dfcLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        dfcLedConfigId = addCircle(dfcLedConfig);
+
+        pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        pressureLedConfigId = addCircle(pressureLedConfig);
+
+        leakLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+        leakLedConfigId = addCircle(leakLedConfig);
 
         // add the static design items
         PaintedTextConfig diagLedLabel = {
@@ -72,8 +128,57 @@ namespace riptide_rviz
             fontName, false, 2, 12,
             QColor(255, 255, 255, 255)
         };
+        PaintedTextConfig ffcLedLabel = {
+            87, 20, 0, 0, "FFC",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+        PaintedTextConfig dfcLedLabel = {
+            127, 20, 0, 0, "DFC",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+        PaintedTextConfig pressureLedLabel = {
+            167, 20, 0, 0, "PVT",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+        PaintedTextConfig leakLedLabel = {
+            6, 70, 0, 0, "Leak",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+
+        PaintedTextConfig tempLabel = {
+            50, 70, 0, 0, "Fog",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+
+        PaintedTextConfig cpuTempLabel = {
+            90, 70, 0, 0, "CPU",
+            fontName, false, 2, 12,
+            QColor(255, 255, 255, 255)
+        };
+
+        // init temperature gauge
+        tempGaugeArcId = addArc(tempGaugeArc);
+        tempGaugeIndicatorId = addArc(tempGaugeIndicator);
+        tempTextId = addText(tempTextConfig);
+
+        cpuTempGaugeArcId = addArc(cpuTempGaugeArc);
+        cpuTempGaugeIndicatorId = addArc(cpuTempGaugeIndicator);
+        cpuTempTextId = addText(cpuTempTextConfig);
+
+        // Labels
+        addText(tempLabel);
         addText(diagLedLabel);
         addText(killLedLabel);
+        addText(ffcLedLabel);
+        addText(dfcLedLabel);
+        addText(pressureLedLabel);
+        addText(leakLedLabel);
+        addText(cpuTempLabel);
     }
 
     void DiagnosticOverlay::updateNS(){
@@ -148,7 +253,170 @@ namespace riptide_rviz
 
                 updateCircle(diagLedConfigId, diagLedConfig);
             }
+
+            else if(diagnostic.name.find("Core Temperature") != std::string::npos) {
+                lastCpuTemp = node->get_clock()->now();
+                cpuTempTimedOut = false;
+                
+                // Find the maximum temperature among cores
+                double max_temp = 0.0;
+                for(auto pair : diagnostic.values) {
+                    if(pair.key.find("thermal") != std::string::npos) {
+                        try {
+                            // Extract temperature value (format: "XX.XX C")
+                            std::string temp_str = pair.value;
+                            size_t pos = temp_str.find(" C");
+                            if(pos != std::string::npos) {
+                                double temp = std::stod(temp_str.substr(0, pos));
+                                max_temp = std::max(max_temp, temp);
+                            }
+                        } catch(const std::exception& e) {
+                            // Handle parsing errors
+                            RVIZ_COMMON_LOG_ERROR_STREAM("Error parsing CPU temperature: " << e.what());
+                        }
+                    }
+                }
+                
+                // Update gauge indicator
+                double angleRange = 360.0;
+                double normalizedTemp = std::min(std::max(max_temp, 0.0), 100.0) / 100.0;  // 0-100 C range
+                double newAngle = 90.0 - (normalizedTemp * angleRange); // Start at top and go clockwise
+                cpuTempGaugeIndicator.end_angle_ = newAngle;
+                
+                // Update color based on temperature thresholds
+                if (max_temp > 85.0) {
+                    cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 0, 255);    // R
+                } else if (max_temp > 70.0) {
+                    cpuTempGaugeIndicator.line_color_ = QColor(255, 255, 0, 255);  // Y
+                } else {
+                    cpuTempGaugeIndicator.line_color_ = QColor(0, 255, 0, 255);    // G
+                }
+                
+                // Update text
+                cpuTempTextConfig.text_ = QString::number(max_temp, 'f', 1).toStdString() + "°C";
+                
+                updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
+                updateText(cpuTempTextId, cpuTempTextConfig);
+            }
         }
+    }
+
+    // Callback for the FFC indicator
+    void DiagnosticOverlay::zedCallback(const sensor_msgs::msg::Temperature& msg) {
+        // get our local rosnode
+        auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+        zedTimedOut = false;
+
+        zedLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+        updateCircle(zedLedConfigId, zedLedConfig);
+
+        lastZed = node->get_clock()->now();
+    }
+
+    // Callback for DFC indicator
+    void DiagnosticOverlay::dfcCallback(const sensor_msgs::msg::Temperature& msg) {
+        auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+        dfcTimedOut = false;
+        dfcLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+        updateCircle(dfcLedConfigId, dfcLedConfig);
+        lastDfc = node->get_clock()->now();
+    }
+
+    void DiagnosticOverlay::leakCallback(const std_msgs::msg::Bool& msg) {
+        rclcpp::Node::SharedPtr node;
+        leakTimedOut = false;
+
+        if (msg.data) {
+            if (redFlash) {
+                leakLedConfig.inner_color_ = QColor(255, 0, 0, 255);  // Flash red
+                redFlash = false;
+            }
+            else {
+                leakLedConfig.inner_color_ = QColor(252, 126, 0, 255);  // Flash orange
+                redFlash = true;
+            }
+
+            if (!startedLeaking) {
+                // Pop up an annoying box
+                QMessageBox msgBox;
+                msgBox.setWindowTitle("LEAK");
+                msgBox.setIcon(QMessageBox::Warning);
+                msgBox.setText(QString::fromStdString("Water was detected in one of the cages."));
+
+                QPushButton *killButton = msgBox.addButton("Kill Power", QMessageBox::AcceptRole);
+                msgBox.setStandardButtons(QMessageBox::Ok);
+                msgBox.setDefaultButton(killButton);
+                msgBox.exec();  
+
+                // Get our local rosnode
+                // This has to happen after msgBox.exec or it will hang ros pubs while the msgbox is up
+                node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+                if (msgBox.clickedButton() == (QAbstractButton*)killButton) {
+                    // Publish kill
+                    riptide_msgs2::msg::ElectricalCommand killCmd;
+                    killCmd.command = riptide_msgs2::msg::ElectricalCommand::KILL_ROBOT_POWER;
+                    batteryKillPub->publish(killCmd);
+
+                    RVIZ_COMMON_LOG_WARNING("DiagnosticOverlay: Sending battery kill message");
+                }
+                
+                startedLeaking = true;
+            }
+        }
+        else {
+            leakLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+            startedLeaking = false;
+        }
+
+        // Set node now if it wasn't earlier
+        if (!node)
+            node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+        updateCircle(leakLedConfigId, leakLedConfig);
+        lastLeak = node->get_clock()->now();
+    }
+
+    void DiagnosticOverlay::pressureCallback(const std_msgs::msg::Float32 &msg) {
+        rclcpp::Node::SharedPtr node;
+        leakTimedOut = false;
+
+        //pressure cases
+        // 0 - idle unpressurized
+        // -# - the pressure when a leak is detected
+        // +# - the pressure when a leak is not detected
+
+        if (msg.data == 0) {
+
+            //unpressurized so go organge
+            pressureLedConfig.inner_color_ = QColor(250, 156, 28, 255);
+        }
+        else if(msg.data > 0){
+            pressureLedConfig.inner_color_ = QColor(0, 255, 0, 255);
+        } else {
+            //pressure drop so flash red
+            if (redFlash) {
+                pressureLedConfig.inner_color_ = QColor(255, 0, 0, 255);  // Flash red
+                redFlash = false;
+            }
+            else {
+                pressureLedConfig.inner_color_ = QColor(252, 126, 0, 255);  // Flash orange
+                redFlash = true;
+            }
+        }
+
+        //update the pvt text
+        std::string pvt_text = std::to_string(msg.data);
+        pvtConfig.text_ = pvt_text;
+
+        // Set node now if it wasn't earlier
+        if (!node)
+            node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+
+        lastPressure = node->get_clock()->now();
+
+        updateCircle(pressureLedConfigId, pressureLedConfig);
     }
 
     void DiagnosticOverlay::killCallback(const std_msgs::msg::Bool & msg){
@@ -179,6 +447,37 @@ namespace riptide_rviz
 
         require_update_texture_ = true;
     }
+
+    void DiagnosticOverlay::gyroCallback(const riptide_msgs2::msg::GyroStatus& msg) {
+        auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+        lastGyro = node->get_clock()->now();
+        gyroTimedOut = false;
+        
+        // Update temp display
+        double temp = msg.temperature;
+        
+        // Update gauge indicator
+        double angleRange = 360.0; // round and round baby
+        double normalizedTemp = std::min(std::max(temp, 0.0), 100.0) / 100.0;  // 0-100 C range
+        double newAngle = 90.0 - (normalizedTemp * angleRange); // Start at top and go cw
+        tempGaugeIndicator.end_angle_ = newAngle;
+        
+        // Update color based on temperature thresholds (according to brach)
+        if (temp > 75.0) {
+            tempGaugeIndicator.line_color_ = QColor(255, 0, 0, 255);    // R
+        } else if (temp > 55.0) {
+            tempGaugeIndicator.line_color_ = QColor(255, 255, 0, 255);  // Y
+        } else {
+            tempGaugeIndicator.line_color_ = QColor(0, 255, 0, 255);    // G
+        }
+        
+        // Update text
+        tempTextConfig.text_ = QString::number(temp, 'f', 1).toStdString() + "°C";
+        
+        updateArc(tempGaugeIndicatorId, tempGaugeIndicator);
+        updateText(tempTextId, tempTextConfig);
+    }
+
     
     void DiagnosticOverlay::onEnable(){
         OverlayDisplay::onEnable();
@@ -193,6 +492,7 @@ namespace riptide_rviz
     }
 
     void DiagnosticOverlay::checkTimeout(){
+
         // read current timeout property and convert to duration
         auto timeoutDur = std::chrono::duration<double>(timeoutProperty->getFloat());
 
@@ -226,6 +526,84 @@ namespace riptide_rviz
             // diagnostics timed out, reset them
             killLedConfig.inner_color_ = QColor(255, 0, 255, 255);
             updateCircle(killLedConfigId, killLedConfig);
+        }
+
+        duration = node->get_clock()->now() - lastZed;
+        if (duration > std::chrono::duration<double>(1.0f)) {
+            if (!zedTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: FFC connection timed out!");
+                zedTimedOut = true;
+            }
+
+            zedLedConfig.inner_color_ = QColor(255, 0, 0, 255);
+            updateCircle(zedLedConfigId, zedLedConfig);
+        }
+
+        // Timeout check for DFC indicator
+        duration = node->get_clock()->now() - lastDfc;
+        if (duration > std::chrono::duration<double>(1.0f)) {
+            if (!dfcTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: DFC connection timed out!");
+                dfcTimedOut = true;
+            }
+            dfcLedConfig.inner_color_ = QColor(255, 0, 0, 255);
+            updateCircle(dfcLedConfigId, dfcLedConfig);
+        }
+
+        duration = node->get_clock()->now() - lastLeak;
+        if (duration > std::chrono::duration<double>(2.0s)) {
+            if (!leakTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Leak sensors timed out!");
+                leakTimedOut = true;
+            }
+
+            leakLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+            updateCircle(leakLedConfigId, leakLedConfig);
+        }
+
+
+        // Gyro timeout
+        duration = node->get_clock()->now() - lastGyro;
+        if (duration > std::chrono::duration<double>(2.0)) {
+            if (!gyroTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Gyro temperature timed out!");
+                gyroTimedOut = true;
+            }
+            
+            tempGaugeIndicator.line_color_ = QColor(255, 0, 255, 255);
+            tempTextConfig.text_ = "-.--°C";
+            
+            updateArc(tempGaugeIndicatorId, tempGaugeIndicator);
+            updateText(tempTextId, tempTextConfig);
+        }
+
+        duration = node->get_clock()->now() - lastPressure;
+        if (duration > std::chrono::duration<double>(30.0s)) {
+            if (!pressureTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Pressure sensors timed out!");
+                pressureTimedOut = true;
+            }
+
+            pressureLedConfig.inner_color_ = QColor(255, 0, 255, 255);
+            updateCircle(pressureLedConfigId, pressureLedConfig);
+
+            pvtConfig.text_color_ = QColor(255, 0, 255, 255);
+            updateText(pvtTextId, pvtConfig);
+
+        }
+
+        duration = node->get_clock()->now() - lastCpuTemp;
+        if (duration > std::chrono::duration<double>(2.0)) {
+            if (!cpuTempTimedOut) {
+                RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: CPU temperature timed out!");
+                cpuTempTimedOut = true;
+            }
+            
+            cpuTempGaugeIndicator.line_color_ = QColor(255, 0, 255, 255);
+            cpuTempTextConfig.text_ = "-.--°C";
+            
+            updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
+            updateText(cpuTempTextId, cpuTempTextConfig);
         }
     }
 

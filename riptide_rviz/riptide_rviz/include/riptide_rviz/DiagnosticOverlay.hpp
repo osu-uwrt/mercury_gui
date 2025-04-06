@@ -6,6 +6,11 @@
 
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 #include <std_msgs/msg/bool.hpp>
+#include <sensor_msgs/msg/temperature.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <riptide_msgs2/msg/electrical_command.hpp>
+#include <riptide_msgs2/msg/gyro_status.hpp>
 
 #include <rviz_common/properties/string_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
@@ -29,6 +34,11 @@ namespace riptide_rviz
 
         void diagnosticCallback(const diagnostic_msgs::msg::DiagnosticArray & msg);
         void killCallback(const std_msgs::msg::Bool & msg);
+        void zedCallback(const sensor_msgs::msg::Temperature& msg);
+        void dfcCallback(const sensor_msgs::msg::Temperature& msg);
+        void leakCallback(const std_msgs::msg::Bool& msg);
+        void gyroCallback(const riptide_msgs2::msg::GyroStatus& msg);
+        void pressureCallback(const std_msgs::msg::Float32& msg);
 
         void checkTimeout();
 
@@ -42,22 +52,41 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill;
-        bool diagsTimedOut, killTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut;
 
+        bool startedLeaking = false;
+        bool redFlash = true;
 
         // subscription for diagnostics
         rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr killSub;
+        rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr zedSub;
+        rclcpp::Subscription<sensor_msgs::msg::Temperature>::SharedPtr dfcSub;
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr leakSub;
+        rclcpp::Subscription<riptide_msgs2::msg::GyroStatus>::SharedPtr gyroSub;
+        rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pressureSub;
 
+        // Battery kill publisher
+        rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
+        
         // ids for rendering items so that we can edit them
         int voltageTextId = -1;
+        int pvtTextId = -1;
         int diagLedConfigId = -1;
         int killLedConfigId = -1;
+        int zedLedConfigId = -1;
+        int dfcLedConfigId = -1;
+        int leakLedConfigId = -1;
+        int pressureLedConfigId = -1;
 
         // font configuration info
         QStringList fontFamilies;
         std::string fontName;
+
+        // Temp vars
+        double tempMin{0.0};
+        double tempMax{100.0};
 
         // Addtional RVIZ settings
         rviz_common::properties::EnumProperty *fontProperty;
@@ -75,11 +104,103 @@ namespace riptide_rviz
             QColor(255, 0, 255, 255),
             QColor(0, 0, 0, 255)
         };
+        PaintedCircleConfig zedLedConfig = {
+            100, 50, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
+        PaintedCircleConfig dfcLedConfig = {
+            140, 50, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
+        PaintedCircleConfig leakLedConfig = {
+            20, 100, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
+        PaintedCircleConfig pressureLedConfig = {
+            180, 50, 0, 0, 7, 9,
+            QColor(255, 0, 255, 255),
+            QColor(0, 0, 0, 255)
+        };
         PaintedTextConfig voltageConfig = {
             12, 0, 0, 0, "00.00 V",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
+        PaintedTextConfig pvtConfig = {
+            130, 0, 0, 0, "0.000000",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
 
+
+
+        // Gauge display elements
+        PaintedArcConfig tempGaugeArc{
+            60, 100,    // x, y pos
+            10,         // radius
+            90,         // start angle (degrees)
+            -270,       // end angle (degrees)
+            2,          // line width
+            QColor(40, 40, 40, 255) 
+        };
+        int tempGaugeArcId;
+        
+        PaintedArcConfig tempGaugeIndicator{
+            60, 100,    // x, y pos
+            10,         // radius
+            90,         // start angle
+            90,         // end angle 
+            3,          // line thickness
+            QColor(0, 255, 0, 255) 
+        };
+        int tempGaugeIndicatorId;
+
+        PaintedTextConfig tempTextConfig{
+            50, 110,    // x, y pos
+            0, 0,       // offset
+            "0.0°C",    // default text
+            fontName,
+            false,      // not bold
+            2,          // outline width
+            10,         // font size
+            QColor(255, 255, 255, 255)  // white text
+            };
+        int tempTextId;
+
+        // CPU Temperature gauge elements
+        PaintedArcConfig cpuTempGaugeArc{
+            100, 100,    // x, y pos (adjust as needed)
+            10,         // radius
+            90,         // start angle (degrees)
+            -270,       // end angle (degrees)
+            2,          // line width
+            QColor(40, 40, 40, 255) 
+        };
+        int cpuTempGaugeArcId;
+
+        PaintedArcConfig cpuTempGaugeIndicator{
+            100, 100,    // x, y pos
+            10,         // radius
+            90,         // start angle
+            90,         // end angle 
+            3,          // line thickness
+            QColor(0, 255, 0, 255) 
+        };
+        int cpuTempGaugeIndicatorId;
+
+        PaintedTextConfig cpuTempTextConfig{
+            90, 110,    // x, y pos
+            0, 0,       // offset
+            "0.0°C",    // default text
+            fontName,
+            false,      // not bold
+            2,          // outline width
+            10,         // font size
+            QColor(255, 255, 255, 255)  // white text
+        };
+        int cpuTempTextId;
     };
 } // namespace riptide_rviz
