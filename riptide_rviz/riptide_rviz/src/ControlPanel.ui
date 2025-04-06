@@ -33,6 +33,16 @@
     <enum>QLayout::SetDefaultConstraint</enum>
    </property>
    <item>
+   <widget class="QScrollArea" name="scrollArea">
+     <property name="frameShape">
+      <enum>QFrame::NoFrame</enum>
+     </property>
+     <property name="widgetResizable">
+      <bool>true</bool>
+     </property>
+     <widget class="QWidget" name="scrollAreaWidgetContents">
+      <layout class="QVBoxLayout" name="scrollAreaLayout">
+       <item>
     <layout class="QVBoxLayout" name="layout">
      <property name="spacing">
       <number>9</number>
@@ -1563,6 +1573,10 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
       </widget>
      </item>
     </layout>
+    </item>
+    </layout>
+    </widget>
+    </widget>
    </item>
   </layout>
  </widget>
