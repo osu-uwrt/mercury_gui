@@ -900,8 +900,8 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
         <attribute name="title">
          <string>Calibration</string>
         </attribute>
-        <layout class="QVBoxLayout" name="tuningLayout">
-         <item>
+        <layout class="QGridLayout" name="tuningLayout">
+         <item row="0" column="0">
           <widget class="QWidget" name="widget" native="true">
            <property name="enabled">
             <bool>true</bool>
@@ -913,20 +913,29 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
             </sizepolicy>
            </property>
            <layout class="QGridLayout" name="gridLayout">
-            <item row="1" column="2">
-             <widget class="QPushButton" name="reloadActive">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item row="0" column="2">
+             <widget class="QPushButton" name="reloadController">
               <property name="text">
-               <string>Reload Active</string>
+               <string>Reload</string>
               </property>
              </widget>
             </item>
-            <item row="3" column="0">
-             <widget class="QLabel" name="label_9">
+            <item row="0" column="0">
+             <widget class="QLabel" name="label_4">
               <property name="text">
-               <string>Start Axis:</string>
-              </property>
-              <property name="indent">
-               <number>20</number>
+               <string>Calibration and Tuning</string>
               </property>
              </widget>
             </item>
@@ -965,10 +974,42 @@ QPushButton:!enabled{color: white; background: rgb(100, 130, 110);}</string>
               </property>
              </widget>
             </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="label_9">
+              <property name="text">
+               <string>Start Axis:</string>
+              </property>
+              <property name="indent">
+               <number>-1</number>
+              </property>
+             </widget>
+            </item>
             <item row="1" column="0">
              <widget class="QLabel" name="label_10">
               <property name="text">
                <string>Parameter Reload</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_5">
+              <property name="text">
+               <string>Drag Calibration</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="2">
+             <widget class="QPushButton" name="dragStop">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="styleSheet">
+               <string notr="true">QPushButton {color: white; background:red;}
+
+QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
+              </property>
+              <property name="text">
+               <string>Stop</string>
               </property>
              </widget>
             </item>
@@ -1006,35 +1047,6 @@ QPushButton:!enabled{color: white; background: rgb(100, 130, 110);}</string>
               </item>
              </widget>
             </item>
-            <item row="2" column="2">
-             <widget class="QPushButton" name="dragStop">
-              <property name="enabled">
-               <bool>false</bool>
-              </property>
-              <property name="styleSheet">
-               <string notr="true">QPushButton {color: white; background:red;}
-
-QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
-              </property>
-              <property name="text">
-               <string>Stop</string>
-              </property>
-             </widget>
-            </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_5">
-              <property name="text">
-               <string>Drag Calibration</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="0">
-             <widget class="QLabel" name="label_4">
-              <property name="text">
-               <string>Calibration and Tuning</string>
-              </property>
-             </widget>
-            </item>
             <item row="2" column="3">
              <widget class="QPushButton" name="dragTrigger">
               <property name="text">
@@ -1042,17 +1054,17 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
               </property>
              </widget>
             </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="reloadActive">
+              <property name="text">
+               <string>Reload Active</string>
+              </property>
+             </widget>
+            </item>
             <item row="0" column="1">
              <widget class="QPushButton" name="reloadSolver">
               <property name="text">
                <string>Reload Solver</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QPushButton" name="reloadController">
-              <property name="text">
-               <string>Reload</string>
               </property>
              </widget>
             </item>
@@ -1076,7 +1088,7 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
           <number>0</number>
          </property>
          <item>
-          <layout class="QGridLayout" name="gridLayout_9">
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
            <property name="leftMargin">
             <number>9</number>
            </property>
@@ -1089,64 +1101,97 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
            <property name="bottomMargin">
             <number>9</number>
            </property>
-           <item row="0" column="3">
-            <widget class="QComboBox" name="claw_object"/>
-           </item>
-           <item row="1" column="1">
-            <widget class="QCheckBox" name="disable_auto_learning">
-             <property name="text">
-              <string/>
+           <item>
+            <layout class="QGridLayout" name="gridLayout_6">
+             <property name="topMargin">
+              <number>0</number>
              </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QCheckBox" name="zero_simulator">
-             <property name="text">
-              <string/>
+             <property name="rightMargin">
+              <number>0</number>
              </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QCheckBox" name="sync_odom_enable">
-             <property name="text">
-              <string/>
+             <property name="bottomMargin">
+              <number>0</number>
              </property>
-            </widget>
+             <item row="1" column="0">
+              <widget class="QLabel" name="label_27">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="text">
+                <string>Disable Autotune Learning</string>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1">
+              <widget class="QCheckBox" name="sync_odom_enable">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="label_26">
+               <property name="text">
+                <string>Sync Odom</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="label_28">
+               <property name="text">
+                <string>Zero Simulation</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QCheckBox" name="disable_auto_learning">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QCheckBox" name="zero_simulator">
+               <property name="text">
+                <string/>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
-           <item row="0" column="2">
-            <widget class="QLabel" name="label_29">
-             <property name="text">
-              <string>Claw Object</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QPushButton" name="simulation_apply">
-             <property name="text">
-              <string>Apply</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="label_26">
-             <property name="text">
-              <string>Sync Odom</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="label_27">
-             <property name="text">
-              <string>Disable Autotune Learning</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="label_28">
-             <property name="text">
-              <string>Zero Simulation</string>
-             </property>
-            </widget>
+           <item>
+            <layout class="QVBoxLayout" name="verticalLayout_4">
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_5">
+               <item>
+                <widget class="QLabel" name="label_29">
+                 <property name="text">
+                  <string>Claw Object</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QComboBox" name="claw_object"/>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="simulation_apply">
+               <property name="text">
+                <string>Apply</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
           </layout>
          </item>
@@ -1159,7 +1204,7 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
             <number>9</number>
            </property>
            <property name="bottomMargin">
-            <number>9</number>
+            <number>0</number>
            </property>
            <property name="spacing">
             <number>6</number>
@@ -1189,6 +1234,12 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
            </item>
            <item row="0" column="0">
             <widget class="QLabel" name="label_31">
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>25</height>
+              </size>
+             </property>
              <property name="text">
               <string>Pinger Position</string>
              </property>
