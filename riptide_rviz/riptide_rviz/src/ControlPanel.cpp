@@ -330,7 +330,9 @@ namespace riptide_rviz
         #if CONTROLLER_OUTPUT_TYPE == TARGET_POSITION
             this->pidSetptPub->publish(this->lastCommandedPose);
         #else
-            RVIZ_COMMON_LOG_INFO("Not Republishing Set Point: not supported control mode.");
+            if (ctrlMode == riptide_rviz::ControlPanel::control_modes::POSITION) {
+                RVIZ_COMMON_LOG_INFO("Not Republishing Set Point: not supported control mode.");
+            }
         #endif
     }
 
