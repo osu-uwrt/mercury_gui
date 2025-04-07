@@ -3,12 +3,14 @@
 #include <rclcpp_action/rclcpp_action.hpp>
 
 #include <rviz_common/panel.hpp>
+#include <QTimer>
 
 #include <riptide_msgs2/msg/electrical_command.hpp>
 #include <riptide_msgs2/msg/imu_config.hpp>
 #include <riptide_msgs2/action/mag_cal.hpp>
 #include <riptide_msgs2/action/tare_gyro.hpp>
 #include <riptide_msgs2/action/depressurize.hpp>
+#include <riptide_msgs2/srv/query_imu_serial.hpp>
 
 #include "ui_ElectricalPanel.h"
 
@@ -17,7 +19,8 @@ namespace riptide_rviz
     const static std::string 
         MAG_CAL_ACTION_NAME = "/vectornav/mag_cal",
         TARE_GYRO_ACTION_NAME = "/gyro/tare",
-        DEPRESSURIZE_ACTION_NAME = "/depressurize";
+        DEPRESSURIZE_ACTION_NAME = "/depressurize",
+        CONFIG_SERVICE_NAME = "/vectornav/config";
 
     class ElectricalPanel : public rviz_common::Panel
     {
@@ -32,6 +35,8 @@ namespace riptide_rviz
         using Depressurize = riptide_msgs2::action::Depressurize;
         using DepressurizeSendGoalOptions = rclcpp_action::Client<Depressurize>::SendGoalOptions;
         using DepressurizeGoalHandle = rclcpp_action::Client<Depressurize>::GoalHandle;
+        using ImuConfig = riptide_msgs2::srv::QueryImuSerial;
+        
 
         Q_OBJECT
         public:
@@ -52,6 +57,10 @@ namespace riptide_rviz
         void depressurizeFeedbackCb(DepressurizeGoalHandle::SharedPtr, const std::shared_ptr<const Depressurize::Feedback> feedback);
         void depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result);
 
+        void writeIMU();
+        void readIMU();
+        void saveImuSettings();
+
         private:
         void setStatus(const QString& status, bool error);
         void magCalGoalResponseCb(const MagGoalHandle::SharedPtr & goal_handle);
@@ -62,9 +71,13 @@ namespace riptide_rviz
         void tareGyroGoalResponseCb(const TareGyroGoalHandle::SharedPtr & goal_handle);
         void tareGyroResultCb(const TareGyroGoalHandle::WrappedResult & result);
         Qt::CheckState processCheckState(bool state);
-        void imuConfigCb(const riptide_msgs2::msg::ImuConfig config);
-        void publishImuConfig();
-        void requestCurrentImuConfig();
+
+
+
+        void resultCb(const MagGoalHandle::WrappedResult & result);
+
+        void sendIMUConfigRequest(const std::string& request, bool extResponseTime = false);
+        void waitForConfig(bool extResponseTime = false);
 
         // electrical command vars
         bool loaded = false;
@@ -90,7 +103,9 @@ namespace riptide_rviz
         rclcpp_action::Client<TareGyro>::SharedPtr tareGyroClient;
         rclcpp_action::Client<Depressurize>::SharedPtr depressurizeClient;
         
-        rclcpp::Publisher<riptide_msgs2::msg::ImuConfig>::SharedPtr writeImuConfig;
-        rclcpp::Subscription<riptide_msgs2::msg::ImuConfig>::SharedPtr readImuConfig;
+        rclcpp::Client<ImuConfig>::SharedPtr imuConfigClient;
+        std::shared_future<std::shared_ptr<riptide_msgs2::srv::QueryImuSerial_Response>> imuConfigFuture;
+        int timerTick {};
+        int imuConfigFutureId {};
     };
 }
