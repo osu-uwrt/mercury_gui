@@ -52,8 +52,8 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut;
 
         bool startedLeaking = false;
         bool redFlash = true;
@@ -159,16 +159,48 @@ namespace riptide_rviz
         int tempGaugeIndicatorId;
 
         PaintedTextConfig tempTextConfig{
-            85, 90,    // x, y pos
+            45, 115,    // x, y pos
             0, 0,       // offset
             "0.0°C",    // default text
             fontName,
             false,      // not bold
             2,          // outline width
-            12,         // font size
+            9,         // font size
             QColor(255, 255, 255, 255)  // white text
             };
-            int tempTextId;
+        int tempTextId;
 
+        // CPU Temperature gauge elements
+        PaintedArcConfig cpuTempGaugeArc{
+            100, 100,    // x, y pos (adjust as needed)
+            10,         // radius
+            90,         // start angle (degrees)
+            -270,       // end angle (degrees)
+            2,          // line width
+            QColor(40, 40, 40, 255) 
         };
+        int cpuTempGaugeArcId;
+
+        PaintedArcConfig cpuTempGaugeIndicator{
+            100, 100,    // x, y pos
+            10,         // radius
+            90,         // start angle
+            90,         // end angle 
+            3,          // line thickness
+            QColor(0, 255, 0, 255) 
+        };
+        int cpuTempGaugeIndicatorId;
+
+        PaintedTextConfig cpuTempTextConfig{
+            85, 115,    // x, y pos
+            0, 0,       // offset
+            "0.0°C",    // default text
+            fontName,
+            false,      // not bold
+            2,          // outline width
+            9,         // font size
+            QColor(255, 255, 255, 255)  // white text
+        };
+        int cpuTempTextId;
+    };
 } // namespace riptide_rviz
