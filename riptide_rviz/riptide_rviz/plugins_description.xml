@@ -49,4 +49,9 @@
             RVIZ plugin for commanding robot electronics
         </description>
     </class>
+    <class name="riptide_rviz/DiagnosticsPanel" type="riptide_rviz::DiagnosticsPanel" base_class_type="rviz_common::Panel">
+        <description>
+            RVIZ Plugin for displaying robot diagnostics.
+        </description>
+  </class>
 </library>

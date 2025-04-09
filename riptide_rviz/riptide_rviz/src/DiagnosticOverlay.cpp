@@ -383,7 +383,7 @@ namespace riptide_rviz
 
     void DiagnosticOverlay::pressureCallback(const std_msgs::msg::Float32 &msg) {
         rclcpp::Node::SharedPtr node;
-        leakTimedOut = false;
+        pressureTimedOut = false;
 
         //pressure cases
         // 0 - idle unpressurized

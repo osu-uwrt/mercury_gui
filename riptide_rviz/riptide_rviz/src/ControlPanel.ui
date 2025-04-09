@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>635</width>
+    <width>702</width>
     <height>833</height>
    </rect>
   </property>
@@ -35,19 +35,28 @@
    <item>
     <widget class="QScrollArea" name="scrollArea">
      <property name="sizePolicy">
-      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+      <sizepolicy hsizetype="MinimumExpanding" vsizetype="Expanding">
        <horstretch>0</horstretch>
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
+     <property name="maximumSize">
+      <size>
+       <width>16777215</width>
+       <height>16777215</height>
+      </size>
+     </property>
      <property name="frameShape">
       <enum>QFrame::NoFrame</enum>
      </property>
+     <property name="frameShadow">
+      <enum>QFrame::Raised</enum>
+     </property>
      <property name="horizontalScrollBarPolicy">
-      <enum>Qt::ScrollBarAsNeeded</enum>
+      <enum>Qt::ScrollBarAlwaysOff</enum>
      </property>
      <property name="sizeAdjustPolicy">
-      <enum>QAbstractScrollArea::AdjustIgnored</enum>
+      <enum>QAbstractScrollArea::AdjustToContents</enum>
      </property>
      <property name="widgetResizable">
       <bool>true</bool>
@@ -57,9 +66,15 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>617</width>
+        <width>684</width>
         <height>815</height>
        </rect>
+      </property>
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
       </property>
       <layout class="QVBoxLayout" name="scrollAreaLayout" stretch="0,0,0,0">
        <property name="spacing">
@@ -541,11 +556,11 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeType">
-                <enum>QSizePolicy::Expanding</enum>
+                <enum>QSizePolicy::MinimumExpanding</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -595,9 +610,12 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::MinimumExpanding</enum>
+               </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -660,9 +678,12 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::MinimumExpanding</enum>
+               </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -709,9 +730,12 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::MinimumExpanding</enum>
+               </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -769,11 +793,11 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                 <enum>Qt::Horizontal</enum>
                </property>
                <property name="sizeType">
-                <enum>QSizePolicy::Expanding</enum>
+                <enum>QSizePolicy::MinimumExpanding</enum>
                </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -836,9 +860,12 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
+               <property name="sizeType">
+                <enum>QSizePolicy::MinimumExpanding</enum>
+               </property>
                <property name="sizeHint" stdset="0">
                 <size>
-                 <width>40</width>
+                 <width>0</width>
                  <height>20</height>
                 </size>
                </property>
@@ -931,7 +958,7 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
           </size>
          </property>
          <property name="currentIndex">
-          <number>1</number>
+          <number>0</number>
          </property>
          <widget class="QWidget" name="Tuning">
           <property name="enabled">
@@ -970,37 +997,6 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                 <property name="text">
                  <string>Reload</string>
                 </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_4">
-                <property name="text">
-                 <string>Calibration and Tuning</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QComboBox" name="reloadControllerSelect">
-                <item>
-                 <property name="text">
-                  <string>complete_controller</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>smc</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>pid</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>thruster_solver</string>
-                 </property>
-                </item>
                </widget>
               </item>
               <item row="2" column="1">
@@ -1106,6 +1102,37 @@ QPushButton:!enabled{color:white; background: rgb(140, 100, 100)}</string>
                 <property name="text">
                  <string>Reload Solver</string>
                 </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_4">
+                <property name="text">
+                 <string>Calibration &amp; Tuning</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QComboBox" name="reloadControllerSelect">
+                <item>
+                 <property name="text">
+                  <string>complete_controller</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>smc</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>pid</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>thruster_solver</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>
