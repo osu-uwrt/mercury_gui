@@ -175,7 +175,6 @@ namespace riptide_rviz
     {
         // master window control removal
         delete uiPanel;
-        delete model;
         diagSub.reset();
     }
 
@@ -200,228 +199,253 @@ namespace riptide_rviz
 
     void DiagnosticsPanel::diagCb(const diagnostic_msgs::msg::DiagnosticArray & msg)
     {
+        // Check if UI and model are available
         auto treeView = qobject_cast<QTreeView*>(uiPanel->diagStackView);
-        if (!treeView) {
-            return; // Not a tree view, can't proceed
+        if (!treeView || !model) {
+            RVIZ_COMMON_LOG_WARNING("DiagnosticsPanel: UI components not ready yet");
+            return;
         }
         
-        // If first update, build the tree structure
-        if (timerTick == 0) {
-            // Clear on first update only
-            model->removeRows(0, model->rowCount());
-            
-            // Create a map to store items by hierarchy
-            std::map<std::string, QStandardItem*> parentItems;
-            
-            // Get the root item
-            QStandardItem* rootItem = model->invisibleRootItem();
-            
-            // First pass: build the tree structure
-            for (const auto& status : msg.status) {
-                std::string fullName = status.name;
+        try {
+            // Only rebuild the tree if we don't have one yet or if we're explicitly refreshing
+            if (timerTick == 0) {
+                RVIZ_COMMON_LOG_INFO("DiagnosticsPanel: Building initial tree structure");
                 
-                // Skip empty names
-                if (fullName.empty()) {
-                    continue;
-                }
+                // Clear the model before building
+                model->clear();
+                model->setColumnCount(2);
+                model->setHorizontalHeaderLabels({"Name", "Message"});
                 
-                // Split the path into components
-                std::vector<std::string> pathComponents;
-                std::string::size_type startPos = 0;
-                std::string::size_type pos = 0;
+                // Create a map to store items by hierarchy
+                std::map<std::string, QStandardItem*> parentItems;
                 
-                // Handle leading slash if present
-                if (fullName[0] == '/') {
-                    startPos = 1;
-                }
+                // Get the root item
+                QStandardItem* rootItem = model->invisibleRootItem();
                 
-                // Split by '/'
-                while ((pos = fullName.find('/', startPos)) != std::string::npos) {
-                    pathComponents.push_back(fullName.substr(startPos, pos - startPos));
-                    startPos = pos + 1;
-                }
-                
-                // Add final component (leaf name)
-                if (startPos < fullName.length()) {
-                    pathComponents.push_back(fullName.substr(startPos));
-                }
-                
-                // Skip if no components
-                if (pathComponents.empty()) {
-                    continue;
-                }
-                
-                // Build path
-                QStandardItem* parentItem = rootItem;
-                std::string currentPath = "";
-                
-                // Create hierarchy
-                for (size_t i = 0; i < pathComponents.size(); ++i) {
-                    std::string component = pathComponents[i];
+                // First pass: build the tree structure
+                for (const auto& status : msg.status) {
+                    std::string fullName = status.name;
                     
-                    // Update the current path
-                    if (currentPath.empty()) {
-                        currentPath = component;
-                    } else {
-                        currentPath += "/" + component;
+                    // Skip empty names
+                    if (fullName.empty()) {
+                        continue;
                     }
                     
-                    // Set the storage path (includes leading slash if original had it)
-                    std::string storagePath;
-                    if (fullName[0] == '/' && currentPath[0] != '/') {
-                        storagePath = "/" + currentPath;
-                    } else {
-                        storagePath = currentPath;
+                    // Split the path into components
+                    std::vector<std::string> pathComponents;
+                    std::string::size_type startPos = 0;
+                    std::string::size_type pos = 0;
+                    
+                    // Handle leading slash if present
+                    if (fullName[0] == '/') {
+                        startPos = 1;
                     }
                     
-                    // Check if we already have this path in our map
-                    if (parentItems.find(storagePath) == parentItems.end()) {
-                        // Create a new item for this path component
-                        QStandardItem* newItem = new QStandardItem(QString::fromStdString(component));
-                        QStandardItem* messageItem = new QStandardItem("");
+                    // Split by '/'
+                    while ((pos = fullName.find('/', startPos)) != std::string::npos) {
+                        pathComponents.push_back(fullName.substr(startPos, pos - startPos));
+                        startPos = pos + 1;
+                    }
+                    
+                    // Add final component (leaf name)
+                    if (startPos < fullName.length()) {
+                        pathComponents.push_back(fullName.substr(startPos));
+                    }
+                    
+                    // Skip if no components
+                    if (pathComponents.empty()) {
+                        continue;
+                    }
+                    
+                    // Build path
+                    QStandardItem* parentItem = rootItem;
+                    std::string currentPath = "";
+                    
+                    // Create hierarchy
+                    for (size_t i = 0; i < pathComponents.size(); ++i) {
+                        std::string component = pathComponents[i];
                         
-                        // Store the full path for future reference
-                        newItem->setData(QString::fromStdString(storagePath), Qt::UserRole);
+                        // Update the current path
+                        if (currentPath.empty()) {
+                            currentPath = component;
+                        } else {
+                            currentPath += "/" + component;
+                        }
                         
-                        // Add both columns
-                        QList<QStandardItem*> rowItems;
-                        rowItems.append(newItem);
-                        rowItems.append(messageItem);
-                        parentItem->appendRow(rowItems);
+                        // Set the storage path (includes leading slash if original had it)
+                        std::string storagePath;
+                        if (fullName[0] == '/' && currentPath[0] != '/') {
+                            storagePath = "/" + currentPath;
+                        } else {
+                            storagePath = currentPath;
+                        }
                         
-                        // Store in map and update parent
-                        parentItems[storagePath] = newItem;
-                        parentItem = newItem;
-                    } else {
-                        // Path exists, just update parent
-                        parentItem = parentItems[storagePath];
+                        // Check if we already have this path in our map
+                        if (parentItems.find(storagePath) == parentItems.end()) {
+                            // Create a new item for this path component
+                            QStandardItem* newItem = new QStandardItem(QString::fromStdString(component));
+                            QStandardItem* messageItem = new QStandardItem("");
+                            
+                            // Store the full path for future reference
+                            newItem->setData(QString::fromStdString(storagePath), Qt::UserRole);
+                            
+                            // Add both columns
+                            QList<QStandardItem*> rowItems;
+                            rowItems.append(newItem);
+                            rowItems.append(messageItem);
+                            parentItem->appendRow(rowItems);
+                            
+                            // Store in map and update parent
+                            parentItems[storagePath] = newItem;
+                            parentItem = newItem;
+                        } else {
+                            // Path exists, just update parent
+                            parentItem = parentItems[storagePath];
+                        }
                     }
                 }
+                
+                // Expand all after creating the structure
+                treeView->expandAll();
+                
+                // Mark that we've completed the tree structure
+                timerTick++;
+                RVIZ_COMMON_LOG_INFO("DiagnosticsPanel: Initial tree structure complete");
             }
             
-            // Expand all after creating the structure
-            treeView->expandAll();
-        }
-        
-        // Now update the status icon and message for each item
-        for (const auto& status : msg.status) {
-            std::string statusName = status.name;
-            
-            // Find the item matching this status
-            QStandardItem* matchingItem = nullptr;
-            
-            // Try to find by stored path in UserRole
-            for (auto it = model->invisibleRootItem(); it && !matchingItem; ) {
+            // Now update the status icon and message for each item
+            for (const auto& status : msg.status) {
+                std::string statusName = status.name;
+                
+                // Skip empty names
+                if (statusName.empty()) {
+                    continue;
+                }
+                
+                // Find the item matching this status
+                QStandardItem* matchingItem = nullptr;
+                
+                // Try to find by stored path in UserRole
                 QList<QStandardItem*> matches;
-                findMatchingItems(it, QString::fromStdString(statusName), matches);
+                findMatchingItems(model->invisibleRootItem(), QString::fromStdString(statusName), matches);
                 
                 if (!matches.isEmpty()) {
                     matchingItem = matches.first();
-                    break;
+                } else {
+                    // If no matching item was found and we're past the initial build,
+                    // this could be a new item that wasn't present during the initial tree build
+                    if (timerTick > 0) {
+                        // For simplicity, just rebuild the entire tree
+                        // In a production environment, you might want to add new nodes to the existing tree instead
+                        RVIZ_COMMON_LOG_INFO("DiagnosticsPanel: New diagnostic item found, refreshing tree");
+                        timerTick = 0;  // Reset to trigger a rebuild on next callback
+                        return;         // Skip this update, we'll handle it on the next callback
+                    }
+                    
+                    // Log that we skipped an item
+                    RVIZ_COMMON_LOG_WARNING("DiagnosticsPanel: Couldn't find item for status: " + statusName);
+                    continue;
                 }
                 
-                // Move to next top-level item if we have one
-                if (model->invisibleRootItem()->rowCount() > 0) {
-                    it = model->invisibleRootItem()->child(0);
-                } else {
-                    break;
+                // Get indices
+                QModelIndex idx = matchingItem->index();
+                QModelIndex messageIdx = idx.sibling(idx.row(), 1);
+                
+                if (!idx.isValid() || !messageIdx.isValid()) {
+                    RVIZ_COMMON_LOG_WARNING("DiagnosticsPanel: Invalid model index for: " + statusName);
+                    continue;
                 }
-            }
-            
-            // Skip if we couldn't find the item
-            if (!matchingItem) {
-                RVIZ_COMMON_LOG_WARNING("DiagnosticsPanel: Couldn't find item for status: " + statusName);
-                continue;
-            }
-            
-            // Get indices
-            QModelIndex idx = matchingItem->index();
-            QModelIndex messageIdx = idx.sibling(idx.row(), 1);
-            
-            // Update name column with status icon and color
-            QIcon icon;
-            QColor textColor;
-            QBrush backgroundBrush;
-            
-            switch(status.level) {
-                case 0: // OK
-                    icon = statusIcons[0];
-                    textColor = QColor(0, 0, 0);  // Black text
-                    backgroundBrush = QBrush();   // Default background
-                    break;
-                case 1: // WARN
-                    icon = statusIcons[1];
-                    textColor = QColor(0, 0, 0);  // Black text
-                    backgroundBrush = QBrush(QColor(255, 255, 200));  // Light yellow
-                    break;
-                case 2: // ERROR
-                    icon = statusIcons[2];
-                    textColor = QColor(0, 0, 0);  // Black text
-                    backgroundBrush = QBrush(QColor(255, 200, 200));  // Light red
-                    break;
-                case 3: // STALE
-                    icon = statusIcons[3];
-                    textColor = QColor(0, 0, 0);  // Black text 
-                    backgroundBrush = QBrush(QColor(230, 230, 230));  // Light gray
-                    break;
-                default:
-                    icon = statusIcons[4];
-                    textColor = QColor(0, 0, 0);  // Black text
-                    backgroundBrush = QBrush();   // Default background
-            }
-            
-            model->setData(idx, icon, Qt::DecorationRole);
-            model->setData(idx, textColor, Qt::ForegroundRole);
-            model->setData(idx, backgroundBrush, Qt::BackgroundRole);
-            
-            // Add status text to tooltip
-            QString statusText;
-            switch(status.level) {
-                case 0: statusText = "OK"; break;
-                case 1: statusText = "WARN"; break;
-                case 2: statusText = "ERROR"; break;
-                case 3: statusText = "STALE"; break;
-                default: statusText = "UNKNOWN";
-            }
-            
-            QString tooltipText = QString("Status: %1\nMessage: %2")
-                                .arg(statusText)
-                                .arg(QString::fromStdString(status.message));
-            
-            // Add key-value pairs to the tooltip if they exist
-            if (!status.values.empty()) {
-                tooltipText += "\n\nDetails:";
-                for (const auto& kv : status.values) {
-                    tooltipText += QString("\n%1: %2")
-                                    .arg(QString::fromStdString(kv.key))
-                                    .arg(QString::fromStdString(kv.value));
+                
+                // Update name column with status icon and color
+                QIcon icon;
+                QColor textColor;
+                QBrush backgroundBrush;
+                
+                switch(status.level) {
+                    case 0: // OK
+                        icon = statusIcons[0];
+                        textColor = QColor(0, 0, 0);  // Black text
+                        backgroundBrush = QBrush();   // Default background
+                        break;
+                    case 1: // WARN
+                        icon = statusIcons[1];
+                        textColor = QColor(0, 0, 0);  // Black text
+                        backgroundBrush = QBrush(QColor(255, 255, 200));  // Light yellow
+                        break;
+                    case 2: // ERROR
+                        icon = statusIcons[2];
+                        textColor = QColor(0, 0, 0);  // Black text
+                        backgroundBrush = QBrush(QColor(255, 200, 200));  // Light red
+                        break;
+                    case 3: // STALE
+                        icon = statusIcons[3];
+                        textColor = QColor(0, 0, 0);  // Black text 
+                        backgroundBrush = QBrush(QColor(230, 230, 230));  // Light gray
+                        break;
+                    default:
+                        icon = statusIcons[4];
+                        textColor = QColor(0, 0, 0);  // Black text
+                        backgroundBrush = QBrush();   // Default background
                 }
+                
+                model->setData(idx, icon, Qt::DecorationRole);
+                model->setData(idx, textColor, Qt::ForegroundRole);
+                model->setData(idx, backgroundBrush, Qt::BackgroundRole);
+                
+                // Add status text to tooltip
+                QString statusText;
+                switch(status.level) {
+                    case 0: statusText = "OK"; break;
+                    case 1: statusText = "WARN"; break;
+                    case 2: statusText = "ERROR"; break;
+                    case 3: statusText = "STALE"; break;
+                    default: statusText = "UNKNOWN";
+                }
+                
+                QString tooltipText = QString("Status: %1\nMessage: %2")
+                                    .arg(statusText)
+                                    .arg(QString::fromStdString(status.message));
+                
+                // Add key-value pairs to the tooltip if they exist
+                if (!status.values.empty()) {
+                    tooltipText += "\n\nDetails:";
+                    for (const auto& kv : status.values) {
+                        tooltipText += QString("\n%1: %2")
+                                        .arg(QString::fromStdString(kv.key))
+                                        .arg(QString::fromStdString(kv.value));
+                    }
+                }
+                
+                model->setData(idx, tooltipText, Qt::ToolTipRole);
+                
+                // Update message column
+                model->setData(messageIdx, QString::fromStdString(status.message));
             }
-            
-            model->setData(idx, tooltipText, Qt::ToolTipRole);
-            
-            // Update message column
-            model->setData(messageIdx, QString::fromStdString(status.message));
-        }
-        
-        // Only increment the timer tick after first update
-        if (timerTick == 0) {
-            timerTick++;
+        } catch (const std::exception& e) {
+            RVIZ_COMMON_LOG_ERROR("DiagnosticsPanel: Exception occurred: " + std::string(e.what()));
+            // Reset the panel to recover from error state
+            refresh();
         }
     }
     
     void DiagnosticsPanel::findMatchingItems(QStandardItem* item, const QString& path, QList<QStandardItem*>& results)
     {
+        // Safety check for null item
+        if (!item) {
+            return;
+        }
+        
         // Check if this item matches
-        if (item && item->data(Qt::UserRole).toString() == path) {
+        if (item->data(Qt::UserRole).toString() == path) {
             results.append(item);
             return;
         }
         
         // If no match, check all children
-        if (item) {
-            for (int i = 0; i < item->rowCount(); ++i) {
-                findMatchingItems(item->child(i), path, results);
+        for (int i = 0; i < item->rowCount(); ++i) {
+            QStandardItem* childItem = item->child(i);
+            if (childItem) {
+                findMatchingItems(childItem, path, results);
             }
         }
     }
