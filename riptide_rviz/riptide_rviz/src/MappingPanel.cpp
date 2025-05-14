@@ -110,7 +110,7 @@ namespace riptide_rviz
         mappingTargetInfoSub = node->create_subscription<riptide_msgs2::msg::MappingTargetInfo>(robotNs + "/state/mapping", 10,
             std::bind(&MappingPanel::mappingStatusCb, this, _1));
 
-        mappingObjectSub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(robotNs + "/mapping/torpedo", 10,
+        mappingObjectSub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(robotNs + "/mapping/torpedo_small_hole", 10,
             std::bind(&MappingPanel::mappingObjectCb, this, _1));
         
         mappingTargetClient = std::make_shared<GuiSrvClient<MappingTarget>>(node, robotNs + "/mapping_target",
@@ -199,6 +199,11 @@ namespace riptide_rviz
         MappingTarget::Request::SharedPtr targetReq = std::make_shared<MappingTarget::Request>();
         targetReq->target_info.target_object = desiredTarget;
         targetReq->target_info.lock_map = desiredLock;
+
+        // auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+
+        // mappingObjectSub = node->create_subscription<geometry_msgs::msg::PoseWithCovarianceStamped>(robotNs + "/mapping/" + desiredTarget, 10,
+        //     std::bind(&MappingPanel::mappingObjectCb, this, _1));
 
         mappingTargetClient->callService(targetReq);
     }
