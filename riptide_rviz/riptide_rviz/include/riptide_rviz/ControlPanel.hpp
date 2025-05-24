@@ -43,6 +43,13 @@
 
 namespace riptide_rviz
 {
+    struct ActiveBallastIDs
+    {
+        int
+            exaustId,
+            pressureId,
+            waterId;
+    };
 
     class ControlPanel : public rviz_common::Panel
     {
@@ -100,6 +107,15 @@ namespace riptide_rviz
         //simualtor apply
         void simulator_apply_clickec();
 
+        //buoyancy buttons
+        void handleBallastDive();
+        void handleBallastSurface();
+        void handleBallastHold();
+
+        void handleBallastToggleExaust();
+        void handleBallastTogglePressure();
+        void handleBallastToggleWater();
+
         //publish the current set point
         void pubCurrentSetpoint();
 
@@ -121,7 +137,14 @@ namespace riptide_rviz
         void setDragCalRunning(bool running);
         void dragGoalResponseCb(const CalibrateDragGH::SharedPtr &goal_handle);
         void dragResultCb(const CalibrateDragGH::WrappedResult &result);
-        
+        void setSolenoidStatuses(const bool statuses[3]);
+        void setSolenoidStatusById(int solenoidId, bool value);
+        void getSolenoidStatuses(bool statuses[3]);
+        void publishSolenoidStatuses(const bool statuses[3]);
+        bool isBallastStateIllegal(bool statuses[3]);
+        void solenoid1Callback(const std_msgs::msg::Bool& msg);
+        void solenoid2Callback(const std_msgs::msg::Bool& msg);
+        void solenoid3Callback(const std_msgs::msg::Bool& msg);
         void displayPopupWindow(const std::string& warningMessage, const std::string& text);
         bool checkForDuplicateTopics();
         bool last_duplicate_state;
@@ -148,6 +171,10 @@ namespace riptide_rviz
         // internal flags
         bool vehicleEnabled = false;
         bool degreeReadout = true;
+        
+        //buoyancy parameters
+        bool activeBallastEnabled = false;
+        ActiveBallastIDs ballastIds;
 
         // QT ui timer for handling data freshness
         QTimer *uiTimer;
@@ -167,6 +194,10 @@ namespace riptide_rviz
         rclcpp::Publisher<riptide_msgs2::msg::KillSwitchReport>::SharedPtr killStatePub;
         rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr dragCalTriggerPub;
         rclcpp::Publisher<std_msgs::msg::String>::SharedPtr clawObjectPub;
+        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr
+            solenoid1Pub,
+            solenoid2Pub,
+            solenoid3Pub;
 
         // ROS Timers
         rclcpp::TimerBase::SharedPtr killPubTimer;
@@ -179,6 +210,11 @@ namespace riptide_rviz
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odomSub;
         rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
         rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr selectPoseSub;
+
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr
+            solenoid1Sub,
+            solenoid2Sub,
+            solenoid3Sub;
 
         //service clients
         rclcpp::Client<Trigger>::SharedPtr 

@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tinyxml2_vendor REQUIRED)
 
@@ -92,6 +93,7 @@ set(deps
   rclcpp 
   rclcpp_action
   ament_index_cpp
+  yaml-cpp
   tf2
   rviz_common 
   rviz_rendering 

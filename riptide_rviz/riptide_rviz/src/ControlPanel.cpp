@@ -11,6 +11,8 @@
 #include <yaml-cpp/yaml.h>
 #include <string>
 
+#include <yaml-cpp/yaml.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <rviz_common/logging.hpp>
 #include <rviz_common/display_context.hpp>
@@ -25,6 +27,37 @@ using std::placeholders::_2;
 #define SETPOINT_REPUB_PERIOD 1s
 #define SETPOINT_MARKER_SCALE 1.5
 #define EXPECTED_CONTROLLER_DIAG_KEYS 5 //getting unreliable message size data, so this is hard coded :( - this should be the number of keys in the message not the number that should be accessed
+
+template<typename T>
+T getYamlNodeAs(const YAML::Node& n, const std::vector<std::string>& keywords)
+{
+    if(keywords.empty())
+    {
+        throw std::runtime_error("getYamlNodeAs() requires at least one keyword.");
+    }
+
+    YAML::Node node = YAML::Clone(n);
+    
+    try
+    {
+        for(std::string s : keywords)
+        {
+            node = node[s];
+        }
+
+        return node.as<T>();
+    } catch(YAML::Exception& e)
+    {
+        std::string msg = "Failed to parse value at tag " + keywords[0];
+        for(size_t i = 1; i < keywords.size(); i++)
+        {
+            msg +=  " -> " + keywords[i];
+        }
+        
+        msg += ": " + std::string(e.what());
+        throw std::runtime_error(msg);
+    }
+}
 
 const std::string get_hostname()
 {
@@ -110,6 +143,14 @@ namespace riptide_rviz
         //connect simulator apply
         connect(uiPanel->simulation_apply, &QPushButton::clicked, this, &ControlPanel::simulator_apply_clickec);
 
+        //buoyancy buttons
+        connect(uiPanel->bstCmdDive, &QPushButton::clicked, this, &ControlPanel::handleBallastDive);
+        connect(uiPanel->bstCmdSurface, &QPushButton::clicked, this, &ControlPanel::handleBallastSurface);
+        connect(uiPanel->bstCmdHold, &QPushButton::clicked, this, &ControlPanel::handleBallastHold);
+        connect(uiPanel->bstExaustToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleExaust);
+        connect(uiPanel->bstPressureToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastTogglePressure);
+        connect(uiPanel->bstWaterToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleWater);
+
         RVIZ_COMMON_LOG_INFO("ControlPanel: Initialized panel");
     }
 
@@ -159,6 +200,27 @@ namespace riptide_rviz
         delete str;
         delete configVal;
 
+        //load robot yaml and configure buoyancy parameters if available
+        std::string robotYaml = ament_index_cpp::get_package_share_directory("riptide_descriptions2") + "/config/" + robot_ns.substr(1) + ".yaml";
+        YAML::Node yamlRoot = YAML::LoadFile(robotYaml);
+        activeBallastEnabled = yamlRoot["active_ballast"].IsDefined();
+        if(activeBallastEnabled)
+        {
+            try
+            {
+                ballastIds.exaustId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "exaust_solenoid"});
+                ballastIds.pressureId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "pressure_solenoid"});
+                ballastIds.waterId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "water_solenoid"});
+                RVIZ_COMMON_LOG_INFO("ControlPanel: Enabled active ballast support.");
+            } catch(std::runtime_error& e)
+            {
+                RVIZ_COMMON_LOG_ERROR("ControlPanel: Attempted to enable active ballast but encountered error while parsing " + robotYaml + ": " + std::string(e.what()));
+                activeBallastEnabled = false;
+            }
+        }
+
+        uiPanel->tabWidget_2->setTabEnabled(2, activeBallastEnabled);
+
         // create the timer but hold on starting it as things may not have been fully initialized yet
         uiTimer = new QTimer(this);
         connect(uiTimer, &QTimer::timeout, [this](void)
@@ -175,6 +237,19 @@ namespace riptide_rviz
             "goal_pose", rclcpp::SystemDefaultsQoS(),
             std::bind(&ControlPanel::selectedPose, this, _1));
 
+        //solenoid subs
+        solenoid1Sub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/power_board/command/solenoid1", 10,
+            std::bind(&ControlPanel::solenoid1Callback, this, _1));
+        
+        solenoid2Sub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/power_board/command/solenoid2", 10,
+            std::bind(&ControlPanel::solenoid2Callback, this, _1));
+            
+        solenoid3Sub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/power_board/command/solenoid3", 10,
+            std::bind(&ControlPanel::solenoid3Callback, this, _1));
+
         // setup the ROS topics that depend on namespace
         // make publishers
         auxPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/state/aux", rclcpp::SystemDefaultsQoS());
@@ -190,6 +265,11 @@ namespace riptide_rviz
         
         dragCalTriggerPub = node->create_publisher<std_msgs::msg::Empty>(robot_ns + "/trigger", rclcpp::SystemDefaultsQoS());
         clawObjectPub = node->create_publisher<std_msgs::msg::String>(robot_ns + "/simulator/loaded_claw_object", rclcpp::SystemDefaultsQoS());
+
+        //solenoid pubs
+        solenoid1Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid1", 10);
+        solenoid2Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid2", 10);
+        solenoid3Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid3", 10);
 
         // make ROS Subscribers
         odomSub = node->create_subscription<nav_msgs::msg::Odometry>(
@@ -1362,6 +1442,86 @@ namespace riptide_rviz
         setDragCalRunning(false);
     }
 
+    void ControlPanel::setSolenoidStatuses(const bool statuses[3])
+    {
+        uiPanel->bstExaustToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[0] ? "red" : "green")));
+        uiPanel->bstPressureToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[1] ? "red" : "green")));
+        uiPanel->bstWaterToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[2] ? "red" : "green")));
+
+        uiPanel->bstExaustToggle->setText((statuses[0] ? "Close" : "Open"));
+        uiPanel->bstPressureToggle->setText((statuses[1] ? "Close" : "Open"));
+        uiPanel->bstWaterToggle->setText((statuses[2] ? "Close" : "Open"));
+    }
+
+    void ControlPanel::setSolenoidStatusById(int solenoidId, bool value)
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+
+        if(solenoidId == ballastIds.exaustId)
+        {
+            s[0] = value;
+        } else if(solenoidId == ballastIds.pressureId)
+        {
+            s[1] = value;
+        } else if(solenoidId == ballastIds.waterId)
+        {
+            s[2] = value;
+        } else
+        {
+            RVIZ_COMMON_LOG_WARNING("Solenoid ID " + std::to_string(solenoidId) + " is not valid (must be 1-3)");
+        }
+
+        setSolenoidStatuses(s);
+    }
+
+    void ControlPanel::getSolenoidStatuses(bool statuses[3])
+    {
+        statuses[0] = uiPanel->bstExaustToggle->text() == "Close";
+        statuses[1] = uiPanel->bstPressureToggle->text() == "Close";
+        statuses[2] = uiPanel->bstWaterToggle->text() == "Close";
+    }
+
+    void ControlPanel::publishSolenoidStatuses(const bool statuses[3])
+    {
+        std_msgs::msg::Bool msg;
+        std::vector<rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr> pubs = {solenoid1Pub, solenoid2Pub, solenoid3Pub};
+        
+        //exaust solenoid
+        msg.data = statuses[0];
+        pubs[ballastIds.exaustId - 1]->publish(msg);
+        
+        //pressure solenoid
+        msg.data = statuses[1];
+        pubs[ballastIds.pressureId - 1]->publish(msg);
+
+        //water solenoid
+        msg.data = statuses[2];
+        pubs[ballastIds.waterId - 1]->publish(msg);
+    }
+
+    bool ControlPanel::isBallastStateIllegal(bool statuses[3])
+    {
+        // any state having exaust and pressure open is illegal and could result in bad
+        return statuses[0] && statuses[1];
+    }
+
+    void ControlPanel::solenoid1Callback(const std_msgs::msg::Bool& msg)
+    {
+        setSolenoidStatusById(1, msg.data);
+    }
+
+    void ControlPanel::solenoid2Callback(const std_msgs::msg::Bool& msg)
+    {
+        setSolenoidStatusById(2, msg.data);
+    }
+
+    void ControlPanel::solenoid3Callback(const std_msgs::msg::Bool& msg)
+    {
+        setSolenoidStatusById(3, msg.data);
+    }
+
+
     void ControlPanel::simulator_apply_clickec(){
         //zero the sim
         if(uiPanel->zero_simulator->isChecked()){
@@ -1375,6 +1535,64 @@ namespace riptide_rviz
         msg.data = uiPanel->claw_object->currentText().toStdString().c_str();
         clawObjectPub->publish(msg);
     }
+
+    void ControlPanel::handleBallastDive()
+    {
+        bool s[3] = {true, false, true};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastSurface()
+    {
+        bool s[3] = {false, true, true};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastHold()
+    {
+        bool s[3] = {false, false, false};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastToggleExaust()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[0] = !s[0];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastTogglePressure()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[1] = !s[1];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastToggleWater()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[2] = !s[2];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
 
 } // namespace riptide_rviz
 
