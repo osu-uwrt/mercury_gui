@@ -4,7 +4,6 @@
     mesh_pkg: riptide_meshes
     mesh_directory: meshes
     marker_topic: mapping_markers
-    robot: talos
     markers:
       marker0:
         mesh: gate  # NOTE: if this is "arrow", "sphere", or "cube", the builtin message support for those shapes will be used instead of a mesh file
