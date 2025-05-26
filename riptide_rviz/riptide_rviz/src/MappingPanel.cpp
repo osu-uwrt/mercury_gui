@@ -265,9 +265,9 @@ namespace riptide_rviz
             if (rec_location.startsWith("~")) {
                 rec_location.replace(0, 1, "/home/ros");
             }
-            if (!rec_location.endsWith(".svo"))
+            if (!rec_location.endsWith(".svo*"))
             {
-                rec_location = rec_location + ".svo";
+                rec_location = rec_location + ".svo2";
             }
         
             // Extract just the filename for display

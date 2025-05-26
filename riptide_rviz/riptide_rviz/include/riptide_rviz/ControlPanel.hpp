@@ -44,14 +44,6 @@
 
 namespace riptide_rviz
 {
-    struct ActiveBallastIDs
-    {
-        int
-            exaustId,
-            pressureId,
-            waterId;
-    };
-
     struct BallastLogData
     {
         double
@@ -155,13 +147,12 @@ namespace riptide_rviz
         void dragGoalResponseCb(const CalibrateDragGH::SharedPtr &goal_handle);
         void dragResultCb(const CalibrateDragGH::WrappedResult &result);
         void setSolenoidStatuses(const bool statuses[3]);
-        void setSolenoidStatusById(int solenoidId, bool value);
         void getSolenoidStatuses(bool statuses[3]);
         void publishSolenoidStatuses(const bool statuses[3]);
         bool isBallastStateIllegal(bool statuses[3]);
-        void solenoid1Callback(const std_msgs::msg::Bool& msg);
-        void solenoid2Callback(const std_msgs::msg::Bool& msg);
-        void solenoid3Callback(const std_msgs::msg::Bool& msg);
+        void exaustSolenoidCb(const std_msgs::msg::Bool& msg);
+        void pressureSolenoidCb(const std_msgs::msg::Bool& msg);
+        void waterSolenoidCb(const std_msgs::msg::Bool& msg);
         void regPressureCallback(const std_msgs::msg::Float32& msg);
         void regHousingPressureCallback(const std_msgs::msg::Float32& msg);
         void tankPressureCallback(const std_msgs::msg::Float32& msg);
@@ -195,7 +186,6 @@ namespace riptide_rviz
         
         //buoyancy parameters
         bool activeBallastEnabled = false;
-        ActiveBallastIDs ballastIds;
 
         //ballast system logging
         bool ballastLogRunning = false;
@@ -225,9 +215,9 @@ namespace riptide_rviz
         rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr dragCalTriggerPub;
         rclcpp::Publisher<std_msgs::msg::String>::SharedPtr clawObjectPub;
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr
-            solenoid1Pub,
-            solenoid2Pub,
-            solenoid3Pub;
+            exaustSolenoidPub,
+            pressureSolenoidPub,
+            waterSolenoidPub;
 
         // ROS Timers
         rclcpp::TimerBase::SharedPtr killPubTimer;
@@ -242,9 +232,9 @@ namespace riptide_rviz
         rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr selectPoseSub;
 
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr
-            solenoid1Sub,
-            solenoid2Sub,
-            solenoid3Sub;
+            exaustSolenoidSub,
+            pressureSolenoidSub,
+            waterSolenoidSub;
 
         rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr
             regPressureSub,

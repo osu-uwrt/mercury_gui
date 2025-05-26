@@ -219,21 +219,6 @@ namespace riptide_rviz
         std::string robotYaml = ament_index_cpp::get_package_share_directory("riptide_descriptions2") + "/config/" + robot_ns.substr(1) + ".yaml";
         YAML::Node yamlRoot = YAML::LoadFile(robotYaml);
         activeBallastEnabled = yamlRoot["active_ballast"].IsDefined();
-        if(activeBallastEnabled)
-        {
-            try
-            {
-                ballastIds.exaustId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "exaust_solenoid"});
-                ballastIds.pressureId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "pressure_solenoid"});
-                ballastIds.waterId = getYamlNodeAs<int>(yamlRoot, {"active_ballast", "water_solenoid"});
-                RVIZ_COMMON_LOG_INFO("ControlPanel: Enabled active ballast support.");
-            } catch(std::runtime_error& e)
-            {
-                RVIZ_COMMON_LOG_ERROR("ControlPanel: Attempted to enable active ballast but encountered error while parsing " + robotYaml + ": " + std::string(e.what()));
-                activeBallastEnabled = false;
-            }
-        }
-
         uiPanel->tabWidget_2->setTabEnabled(2, activeBallastEnabled);
 
         // create the timer but hold on starting it as things may not have been fully initialized yet
@@ -253,17 +238,17 @@ namespace riptide_rviz
             std::bind(&ControlPanel::selectedPose, this, _1));
 
         //solenoid subs
-        solenoid1Sub = node->create_subscription<std_msgs::msg::Bool>(
-            robot_ns + "/power_board/command/solenoid1", 10,
-            std::bind(&ControlPanel::solenoid1Callback, this, _1));
+        exaustSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/exaust", 10,
+            std::bind(&ControlPanel::exaustSolenoidCb, this, _1));
         
-        solenoid2Sub = node->create_subscription<std_msgs::msg::Bool>(
-            robot_ns + "/power_board/command/solenoid2", 10,
-            std::bind(&ControlPanel::solenoid2Callback, this, _1));
+        pressureSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/pressure", 10,
+            std::bind(&ControlPanel::pressureSolenoidCb, this, _1));
             
-        solenoid3Sub = node->create_subscription<std_msgs::msg::Bool>(
-            robot_ns + "/power_board/command/solenoid3", 10,
-            std::bind(&ControlPanel::solenoid3Callback, this, _1));
+        waterSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/water", 10,
+            std::bind(&ControlPanel::waterSolenoidCb, this, _1));
 
         regPressureSub = node->create_subscription<std_msgs::msg::Float32>(
             robot_ns + "/state/pressure/regulated", 10,
@@ -294,9 +279,9 @@ namespace riptide_rviz
         clawObjectPub = node->create_publisher<std_msgs::msg::String>(robot_ns + "/simulator/loaded_claw_object", rclcpp::SystemDefaultsQoS());
 
         //solenoid pubs
-        solenoid1Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid1", 10);
-        solenoid2Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid2", 10);
-        solenoid3Pub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/power_board/command/solenoid3", 10);
+        exaustSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/exaust", 10);
+        pressureSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/pressure", 10);
+        waterSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/water", 10);
 
         // make ROS Subscribers
         odomSub = node->create_subscription<nav_msgs::msg::Odometry>(
@@ -591,14 +576,18 @@ namespace riptide_rviz
                 this->teleopPID = fork();
 
                 if(teleopPID == 0){
-                    RVIZ_COMMON_LOG_INFO("Launching RocketLeague Node");
+                    RVIZ_COMMON_LOG_INFO("Launching teleop Node");
 
                     //set process group id so this can be killed later
                     setpgid(0,0);
 
                     //run rocket leauge node
+                    std::string teleopLaunchArg = "robot:=" + robot_ns.substr(1);
+                    RVIZ_COMMON_LOG_INFO("Teleop using robot name: " + teleopLaunchArg);
+                    char teleopLaunchArgC[32];
+                    strcpy(teleopLaunchArgC, teleopLaunchArg.c_str());
                     char* command = "ros2";
-                    char* commandArgList[] = {"ros2", "run", "riptide_controllers2", "RocketLeague.py"};
+                    char* commandArgList[] = {"ros2", "launch", "riptide_controllers2", "teleop.launch.py", teleopLaunchArgC, nullptr};
 
                     execvp(command, commandArgList);
 
@@ -1509,28 +1498,6 @@ namespace riptide_rviz
         uiPanel->bstWaterToggle->setText((statuses[2] ? "Close" : "Open"));
     }
 
-    void ControlPanel::setSolenoidStatusById(int solenoidId, bool value)
-    {
-        bool s[3];
-        getSolenoidStatuses(s);
-
-        if(solenoidId == ballastIds.exaustId)
-        {
-            s[0] = value;
-        } else if(solenoidId == ballastIds.pressureId)
-        {
-            s[1] = value;
-        } else if(solenoidId == ballastIds.waterId)
-        {
-            s[2] = value;
-        } else
-        {
-            RVIZ_COMMON_LOG_WARNING("Solenoid ID " + std::to_string(solenoidId) + " is not valid (must be 1-3)");
-        }
-
-        setSolenoidStatuses(s);
-    }
-
     void ControlPanel::getSolenoidStatuses(bool statuses[3])
     {
         statuses[0] = uiPanel->bstExaustToggle->text() == "Close";
@@ -1541,19 +1508,18 @@ namespace riptide_rviz
     void ControlPanel::publishSolenoidStatuses(const bool statuses[3])
     {
         std_msgs::msg::Bool msg;
-        std::vector<rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr> pubs = {solenoid1Pub, solenoid2Pub, solenoid3Pub};
         
         //exaust solenoid
         msg.data = statuses[0];
-        pubs[ballastIds.exaustId - 1]->publish(msg);
+        exaustSolenoidPub->publish(msg);
         
         //pressure solenoid
         msg.data = statuses[1];
-        pubs[ballastIds.pressureId - 1]->publish(msg);
+        pressureSolenoidPub->publish(msg);
 
         //water solenoid
         msg.data = statuses[2];
-        pubs[ballastIds.waterId - 1]->publish(msg);
+        waterSolenoidPub->publish(msg);
     }
 
     bool ControlPanel::isBallastStateIllegal(bool statuses[3])
@@ -1562,9 +1528,12 @@ namespace riptide_rviz
         return statuses[0] && statuses[1];
     }
 
-    void ControlPanel::solenoid1Callback(const std_msgs::msg::Bool& msg)
+    void ControlPanel::exaustSolenoidCb(const std_msgs::msg::Bool& msg)
     {
-        setSolenoidStatusById(1, msg.data);
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[0] = msg.data;
+        setSolenoidStatuses(s);
 
         if(ballastLogRunning)
         {
@@ -1572,9 +1541,12 @@ namespace riptide_rviz
         }
     }
 
-    void ControlPanel::solenoid2Callback(const std_msgs::msg::Bool& msg)
+    void ControlPanel::pressureSolenoidCb(const std_msgs::msg::Bool& msg)
     {
-        setSolenoidStatusById(2, msg.data);
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[1] = msg.data;
+        setSolenoidStatuses(s);
 
         if(ballastLogRunning)
         {
@@ -1582,9 +1554,12 @@ namespace riptide_rviz
         }
     }
 
-    void ControlPanel::solenoid3Callback(const std_msgs::msg::Bool& msg)
+    void ControlPanel::waterSolenoidCb(const std_msgs::msg::Bool& msg)
     {
-        setSolenoidStatusById(3, msg.data);
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[2] = msg.data;
+        setSolenoidStatuses(s);
 
         if(ballastLogRunning)
         {
