@@ -7,6 +7,7 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/int8.hpp>
+#include <std_msgs/msg/float32.hpp>
 #include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/bool.hpp>
@@ -49,6 +50,20 @@ namespace riptide_rviz
             exaustId,
             pressureId,
             waterId;
+    };
+
+    struct BallastLogData
+    {
+        double
+            depth,
+            regPressure,
+            regHousingPressure,
+            tankPressure;
+        
+        bool
+            exaustState,
+            pressureState,
+            waterState;
     };
 
     class ControlPanel : public rviz_common::Panel
@@ -116,6 +131,8 @@ namespace riptide_rviz
         void handleBallastTogglePressure();
         void handleBallastToggleWater();
 
+        void startBallastLogData();
+
         //publish the current set point
         void pubCurrentSetpoint();
 
@@ -145,6 +162,10 @@ namespace riptide_rviz
         void solenoid1Callback(const std_msgs::msg::Bool& msg);
         void solenoid2Callback(const std_msgs::msg::Bool& msg);
         void solenoid3Callback(const std_msgs::msg::Bool& msg);
+        void regPressureCallback(const std_msgs::msg::Float32& msg);
+        void regHousingPressureCallback(const std_msgs::msg::Float32& msg);
+        void tankPressureCallback(const std_msgs::msg::Float32& msg);
+        void updateBallastLog(const rclcpp::Time& now);
         void displayPopupWindow(const std::string& warningMessage, const std::string& text);
         bool checkForDuplicateTopics();
         bool last_duplicate_state;
@@ -175,6 +196,15 @@ namespace riptide_rviz
         //buoyancy parameters
         bool activeBallastEnabled = false;
         ActiveBallastIDs ballastIds;
+
+        //ballast system logging
+        bool ballastLogRunning = false;
+        std::string ballastLogFileName;
+        rclcpp::Time lastBallastLogTime;
+        BallastLogData ballastLogData;
+
+        //pixmap for ballast diagram
+        std::shared_ptr<QPixmap> ballastDiagram;
 
         // QT ui timer for handling data freshness
         QTimer *uiTimer;
@@ -215,6 +245,11 @@ namespace riptide_rviz
             solenoid1Sub,
             solenoid2Sub,
             solenoid3Sub;
+
+        rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr
+            regPressureSub,
+            regHousingPressureSub,
+            tankPressureSub;
 
         //service clients
         rclcpp::Client<Trigger>::SharedPtr 

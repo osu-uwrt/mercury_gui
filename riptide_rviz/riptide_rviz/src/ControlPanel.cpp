@@ -7,9 +7,11 @@
 #include <algorithm>
 #include <iostream>
 #include <QMessageBox>
+#include <QFileDialog>
 #include <signal.h>
 #include <yaml-cpp/yaml.h>
 #include <string>
+#include <fstream>
 
 #include <yaml-cpp/yaml.h>
 #include <ament_index_cpp/get_package_share_directory.hpp>
@@ -150,6 +152,19 @@ namespace riptide_rviz
         connect(uiPanel->bstExaustToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleExaust);
         connect(uiPanel->bstPressureToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastTogglePressure);
         connect(uiPanel->bstWaterToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleWater);
+        connect(uiPanel->ballastLogButton, &QPushButton::clicked, this, &ControlPanel::startBallastLogData);
+
+        //initialize buoyancy diagram label
+        std::string ballastDiagramPath = ament_index_cpp::get_package_share_directory("riptide_rviz") + "/icons/ballast.svg";
+        ballastDiagram = std::make_shared<QPixmap>(ballastDiagramPath.c_str());
+        QPixmap scaled = ballastDiagram->scaled(
+            uiPanel->diagramLabel->size(),
+            Qt::KeepAspectRatio,
+            Qt::SmoothTransformation);
+
+        uiPanel->diagramLabel->setPixmap(scaled);
+        uiPanel->diagramLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+        uiPanel->diagramLabel->setScaledContents(false);
 
         RVIZ_COMMON_LOG_INFO("ControlPanel: Initialized panel");
     }
@@ -250,6 +265,18 @@ namespace riptide_rviz
             robot_ns + "/power_board/command/solenoid3", 10,
             std::bind(&ControlPanel::solenoid3Callback, this, _1));
 
+        regPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/regulated", 10,
+            std::bind(&ControlPanel::regPressureCallback, this, _1));
+        
+        regHousingPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/regulator_housing", 10,
+            std::bind(&ControlPanel::regHousingPressureCallback, this, _1));
+        
+        tankPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/tank", 10,
+            std::bind(&ControlPanel::tankPressureCallback, this, _1));
+
         // setup the ROS topics that depend on namespace
         // make publishers
         auxPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/state/aux", rclcpp::SystemDefaultsQoS());
@@ -295,7 +322,12 @@ namespace riptide_rviz
         setTeleopClient = node->create_client<SetBool>(robot_ns + "/setTeleop");
 
         setSimPoseClient = node->create_client<SetPose>(robot_ns+"/set_sim_pose");
-        
+
+        //ballast log init
+        ballastLogRunning = false;
+        lastBallastLogTime = node->get_clock()->now();
+
+        //set up interactive setpoint
         interactiveSetpointMarker.header.frame_id = "world",
         interactiveSetpointMarker.header.stamp = node->get_clock()->now();
         interactiveSetpointMarker.name = "interactive_setpt";
@@ -429,6 +461,19 @@ namespace riptide_rviz
 
     bool ControlPanel::event(QEvent *event)
     {
+        if(event->type() == QEvent::Resize)
+        {
+            if(ballastDiagram)
+            {
+                QPixmap scaled = ballastDiagram->scaled(
+                uiPanel->diagramLabel->size(),
+                Qt::KeepAspectRatio,
+                Qt::TransformationMode::SmoothTransformation);
+    
+                uiPanel->diagramLabel->setPixmap(scaled);
+            }
+        }
+
         return false;
     }
 
@@ -658,6 +703,11 @@ namespace riptide_rviz
             {
                 uiPanel->ctrlDiveInPlace->setEnabled(true);
             }
+        }
+
+        if(ballastLogRunning)
+        {
+            updateBallastLog(node->get_clock()->now());
         }
     }
 
@@ -936,6 +986,12 @@ namespace riptide_rviz
         uiPanel->cmdCurrX->setText(QString::number(frame_coordinates.position.x, 'f', 2));
         uiPanel->cmdCurrY->setText(QString::number(frame_coordinates.position.y, 'f', 2));
         uiPanel->cmdCurrZ->setText(QString::number(frame_coordinates.position.z, 'f', 2));
+
+        //add to ballast data to log
+        if(ballastLogRunning)
+        {
+            ballastLogData.depth = msg.pose.pose.position.z;
+        }
     }
     
 
@@ -1509,18 +1565,85 @@ namespace riptide_rviz
     void ControlPanel::solenoid1Callback(const std_msgs::msg::Bool& msg)
     {
         setSolenoidStatusById(1, msg.data);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.exaustState = msg.data;
+        }
     }
 
     void ControlPanel::solenoid2Callback(const std_msgs::msg::Bool& msg)
     {
         setSolenoidStatusById(2, msg.data);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.pressureState = msg.data;
+        }
     }
 
     void ControlPanel::solenoid3Callback(const std_msgs::msg::Bool& msg)
     {
         setSolenoidStatusById(3, msg.data);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.waterState = msg.data;
+        }
     }
 
+    void ControlPanel::regPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->regulatedPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.regPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::regHousingPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->regHousingPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.regHousingPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::tankPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->tankPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.tankPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::updateBallastLog(const rclcpp::Time& now)
+    {
+        if(now - lastBallastLogTime > 500ms)
+        {
+            //header: seconds, depth, regPressure, regHousingPressure, tankPressure, exaustState, pressureState, waterState
+            std::string line = "";
+            line += std::to_string(now.seconds()) + ",";
+            line += std::to_string(ballastLogData.depth) + ",";
+            line += std::to_string(ballastLogData.regPressure) + ",";
+            line += std::to_string(ballastLogData.regHousingPressure) + ",";
+            line += std::to_string(ballastLogData.tankPressure) + ",";
+            line += std::string(ballastLogData.exaustState ? "true" : "false") + ",";
+            line += std::string(ballastLogData.pressureState ? "true" : "false") + ",";
+            line += std::string(ballastLogData.waterState ? "true" : "false") + "\n";
+    
+            std::ofstream f(ballastLogFileName, std::ios_base::app);
+            f << line;
+            f.close();
+
+            lastBallastLogTime = now;
+        }
+    }
 
     void ControlPanel::simulator_apply_clickec(){
         //zero the sim
@@ -1591,6 +1714,40 @@ namespace riptide_rviz
             return;
         }
         publishSolenoidStatuses(s);
+    }
+
+
+    void ControlPanel::startBallastLogData()
+    {
+        if(ballastLogRunning) //stop log
+        {
+            ballastLogRunning = false;
+            uiPanel->ballastLogButton->setText("Start Log");
+        } else
+        {
+            QString logFileName = QFileDialog::getSaveFileName();
+            if(!logFileName.endsWith(".csv"))
+            {
+                logFileName += ".csv";
+            }
+
+            ballastLogFileName = logFileName.toStdString();
+            ballastLogRunning = true;
+            ballastLogData.depth = 0;
+            ballastLogData.regPressure = 0;
+            ballastLogData.regHousingPressure = 0;
+            ballastLogData.tankPressure = 0;
+            ballastLogData.exaustState = false;
+            ballastLogData.pressureState = false;
+            ballastLogData.waterState = false;
+            uiPanel->ballastLogButton->setText("Stop Log");
+            
+            //write header
+            std::string header = "seconds, depth, regPressure, regHousingPressure, tankPressure, exaustState, pressureState, waterState";
+            std::ofstream f(ballastLogFileName, std::ios_base::app);
+            f << header;
+            f.close();
+        }
     }
 
 
