@@ -239,7 +239,7 @@ namespace riptide_rviz
 
         //solenoid subs
         exaustSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
-            robot_ns + "/state/solenoid/exaust", 10,
+            robot_ns + "/state/solenoid/exhaust", 10,
             std::bind(&ControlPanel::exaustSolenoidCb, this, _1));
         
         pressureSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
@@ -279,7 +279,7 @@ namespace riptide_rviz
         clawObjectPub = node->create_publisher<std_msgs::msg::String>(robot_ns + "/simulator/loaded_claw_object", rclcpp::SystemDefaultsQoS());
 
         //solenoid pubs
-        exaustSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/exaust", 10);
+        exaustSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/exhaust", 10);
         pressureSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/pressure", 10);
         waterSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/water", 10);
 

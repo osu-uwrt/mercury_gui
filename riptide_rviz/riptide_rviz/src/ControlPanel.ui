@@ -1422,7 +1422,7 @@ QPushButton:!enabled{color: white; background: rgb(100, 130, 110);}</string>
                  <string notr="true">color: red</string>
                 </property>
                 <property name="text">
-                 <string>Exaust</string>
+                 <string>Exhaust</string>
                 </property>
                </widget>
               </item>
