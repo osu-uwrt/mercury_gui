@@ -292,10 +292,8 @@ namespace riptide_rviz
             std::bind(&ControlPanel::diagCallback, this, _1));        
 
         //create service clients
-        reloadSolverClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_thruster_solver_params");
-        reloadSmcClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_smc_params");
-        reloadPidClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_pid_params");
         reloadCompleteClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_complete_controller_params");
+        reloadLiltankClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_liltank_controller_params");
 
         //create action clients
         calibrateDrag = rclcpp_action::create_client<CalibrateDrag>(node, robot_ns + "/calibrate_drag_new");
@@ -538,7 +536,6 @@ namespace riptide_rviz
                 uiPanel->ctrlModeTele->setEnabled(true);
 
                 callSetBoolService(this->setTeleopClient, false);
-
                 break;
 
             case riptide_rviz::ControlPanel::control_modes::FEEDFORWARD:
@@ -848,7 +845,7 @@ namespace riptide_rviz
         linear.z = desiredValues[2];
 
         geometry_msgs::msg::Quaternion angularPosition;
-        // geometry_msgs::msg::Vector3 angularVelocity;
+        geometry_msgs::msg::Vector3 angularVelocity;
         
         // handle publishing the angular command
         if (ctrlMode == riptide_rviz::ControlPanel::control_modes::POSITION || ctrlMode == riptide_rviz::ControlPanel::control_modes::FEEDFORWARD)
@@ -866,13 +863,13 @@ namespace riptide_rviz
 
             // build the angular quat for message
             angularPosition = tf2::toMsg(quat);
-        }else {
-            // // build the vector
-            // angularVelocity.x = desiredValues[3];
-            // angularVelocity.y = desiredValues[4];
-            // angularVelocity.z = desiredValues[5];
+        } else {
+            // build the vector
+            angularVelocity.x = desiredValues[3];
+            angularVelocity.y = desiredValues[4];
+            angularVelocity.z = desiredValues[5];
 
-            QMessageBox::warning(uiPanel->CtrlSendCmd, "Control mode not supported!", "Control mode is not supported by the controller! It will be removed from the panel soon.");
+            // QMessageBox::warning(uiPanel->CtrlSendCmd, "Control mode not supported!", "Control mode is not supported by the controller! It will be removed from the panel soon.");
         }
 
         //assemble pose to command
@@ -898,7 +895,7 @@ namespace riptide_rviz
             auto angCmd = riptide_msgs2::msg::ControllerCommand();
             angCmd.mode = ctrlMode;
             angCmd.setpoint_quat = world_command.orientation;
-            // angCmd.setpoint_vect = angularVelocity;
+            angCmd.setpoint_vect = angularVelocity;
 
             // send the control messages
             ctrlCmdLinPub->publish(linCmd);
@@ -1107,14 +1104,7 @@ namespace riptide_rviz
                 callTriggerService(reloadCompleteClient);
                 break;
             case 1:
-                callTriggerService(reloadSmcClient);
-                break;
-            case 2:
-                callTriggerService(reloadPidClient);
-                break;
-            case 3:
-                callTriggerService(reloadSolverClient);
-                break;
+                callTriggerService(reloadLiltankClient);
         }
         
     }

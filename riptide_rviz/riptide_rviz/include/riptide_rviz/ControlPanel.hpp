@@ -243,10 +243,8 @@ namespace riptide_rviz
 
         //service clients
         rclcpp::Client<Trigger>::SharedPtr 
-            reloadSolverClient,
-            reloadSmcClient,
-            reloadPidClient,
-            reloadCompleteClient;
+            reloadCompleteClient,
+            reloadLiltankClient;
 
         rclcpp::Client<SetBool>::SharedPtr setTeleopClient;
 
