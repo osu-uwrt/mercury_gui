@@ -1024,6 +1024,11 @@ namespace riptide_rviz
             if(msg.status[0].name.find("ekf") != std::string::npos){
                 //pull status from ekf message
 
+                // not this time
+                if(msg.status.size() < 2){
+                    return;
+                }
+
                 for(int i = 0; i < (sizeof(msg.status[1].values) / 6); i++){
 
                     //odom frequency
