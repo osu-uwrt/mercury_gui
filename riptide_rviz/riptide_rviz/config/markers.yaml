@@ -61,3 +61,15 @@
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
+      marker9:
+        mesh: slalom
+        frame: slalom_middle_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker10:
+        mesh: slalom
+        frame: slalom_back_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]

@@ -6,12 +6,10 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
-        - /TF1
         - /TF1/Frames1
         - /Mapping Markers1/Namespaces1
-        - /Dummy Detections1/Bin1
       Splitter Ratio: 0.5276073813438416
-    Tree Height: 300
+    Tree Height: 298
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
@@ -157,19 +155,232 @@ Visualization Manager:
       ver_dist: 0
       width: 220
     - Class: rviz_default_plugins/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
         All Enabled: false
+        bin_pink_frame:
+          Value: false
+        bin_target_frame:
+          Value: false
+        bin_yellow_frame:
+          Value: false
+        buoy_frame:
+          Value: false
+        gate_cold_frame:
+          Value: false
+        gate_frame:
+          Value: false
+        gate_hot_frame:
+          Value: false
+        map:
+          Value: true
+        odom:
+          Value: false
+        offset:
+          Value: false
+        prequal_gate_frame:
+          Value: false
+        prequal_pole_frame:
+          Value: false
+        simulator/bouy:
+          Value: false
+        simulator/buoy:
+          Value: false
+        simulator/gate:
+          Value: false
+        simulator/path:
+          Value: false
+        simulator/talos/base_link:
+          Value: false
+        simulator/talos/zed2i/left_optical:
+          Value: false
+        simulator/torpedo:
+          Value: false
+        slalom_back_frame:
+          Value: false
+        slalom_front_frame:
+          Value: false
+        slalom_middle_frame:
+          Value: false
+        table_frame:
+          Value: false
+        talos/acoustics_port_link:
+          Value: false
+        talos/acoustics_starboard_link:
+          Value: false
+        talos/base_inertia:
+          Value: false
+        talos/base_link:
+          Value: true
+        talos/dfc_base_link:
+          Value: false
+        talos/dfc_camera_link:
+          Value: false
+        talos/droppers_link:
+          Value: false
+        talos/dummy_dfc_link:
+          Value: true
+        talos/dvl_link:
+          Value: false
+        talos/ffc_base_link:
+          Value: false
+        talos/ffc_camera_link:
+          Value: false
+        talos/fog_link:
+          Value: false
+        talos/imu_link:
+          Value: false
+        talos/imu_revolute_link:
+          Value: false
+        talos/origin:
+          Value: false
+        talos/poker_link:
+          Value: false
+        talos/pose_sensor_link:
+          Value: false
+        talos/pressure_link:
+          Value: false
+        talos/thruster_0:
+          Value: false
+        talos/thruster_1:
+          Value: false
+        talos/thruster_2:
+          Value: false
+        talos/thruster_3:
+          Value: false
+        talos/thruster_4:
+          Value: false
+        talos/thruster_5:
+          Value: false
+        talos/thruster_6:
+          Value: false
+        talos/thruster_7:
+          Value: false
+        talos/torpedo_0_link:
+          Value: false
+        talos/torpedo_1_link:
+          Value: false
+        talos/torpedo_link:
+          Value: false
+        torpedo_frame:
+          Value: false
+        torpedo_large_hole_frame:
+          Value: false
+        torpedo_small_hole_frame:
+          Value: false
+        world:
+          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        world:
+          map:
+            offset:
+              bin_pink_frame:
+                {}
+              bin_target_frame:
+                {}
+              bin_yellow_frame:
+                {}
+              buoy_frame:
+                {}
+              gate_cold_frame:
+                {}
+              gate_frame:
+                {}
+              gate_hot_frame:
+                {}
+              prequal_gate_frame:
+                {}
+              prequal_pole_frame:
+                {}
+              slalom_back_frame:
+                {}
+              slalom_front_frame:
+                {}
+              slalom_middle_frame:
+                {}
+              table_frame:
+                {}
+              torpedo_frame:
+                {}
+              torpedo_large_hole_frame:
+                {}
+              torpedo_small_hole_frame:
+                {}
+          odom:
+            simulator/talos/base_link:
+              simulator/talos/zed2i/left_optical:
+                {}
+            talos/base_link:
+              talos/dummy_dfc_link:
+                {}
+              talos/origin:
+                talos/acoustics_port_link:
+                  {}
+                talos/acoustics_starboard_link:
+                  {}
+                talos/base_inertia:
+                  {}
+                talos/dfc_base_link:
+                  talos/dfc_camera_link:
+                    {}
+                talos/droppers_link:
+                  {}
+                talos/dvl_link:
+                  {}
+                talos/ffc_base_link:
+                  talos/ffc_camera_link:
+                    {}
+                talos/fog_link:
+                  {}
+                talos/imu_link:
+                  {}
+                talos/imu_revolute_link:
+                  {}
+                talos/poker_link:
+                  {}
+                talos/pressure_link:
+                  {}
+                talos/thruster_0:
+                  {}
+                talos/thruster_1:
+                  {}
+                talos/thruster_2:
+                  {}
+                talos/thruster_3:
+                  {}
+                talos/thruster_4:
+                  {}
+                talos/thruster_5:
+                  {}
+                talos/thruster_6:
+                  {}
+                talos/thruster_7:
+                  {}
+                talos/torpedo_link:
+                  talos/torpedo_0_link:
+                    {}
+                  talos/torpedo_1_link:
+                    {}
+              talos/pose_sensor_link:
+                {}
+          simulator/bouy:
+            {}
+          simulator/buoy:
+            {}
+          simulator/gate:
+            {}
+          simulator/path:
+            {}
+          simulator/torpedo:
+            {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Alpha: 1
       Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
@@ -335,6 +546,7 @@ Visualization Manager:
       Enabled: true
       Name: Mapping Markers
       Namespaces:
+        ghost: true
         mapping_markers: true
         simGhost: true
       Topic:
@@ -670,6 +882,111 @@ Visualization Manager:
             Reliability Policy: Reliable
             Value: /talos/mapping/torpedo_small_hole
           Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 255; 25; 0
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Front
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/mapping/slalom_front
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 255; 25; 0
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Middle
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/mapping/slalom_middle
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 255; 25; 0
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Back
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/mapping/slalom_back
+          Value: true
       Enabled: true
       Name: Mapping Objects
     - Class: rviz_common/Group
@@ -899,6 +1216,111 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /talos/dummydetections/buoy
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 38; 162; 105
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Front
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/dummydetections/slalom_front
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 38; 162; 105
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Middle
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/dummydetections/slalom_middle
+          Value: true
+        - Alpha: 1
+          Axes Length: 1
+          Axes Radius: 0.10000000149011612
+          Class: rviz_default_plugins/PoseWithCovariance
+          Color: 38; 162; 105
+          Covariance:
+            Orientation:
+              Alpha: 0.5
+              Color: 255; 255; 127
+              Color Style: Unique
+              Frame: Local
+              Offset: 1
+              Scale: 1
+              Value: true
+            Position:
+              Alpha: 0.30000001192092896
+              Color: 204; 51; 204
+              Scale: 1
+              Value: true
+            Value: true
+          Enabled: true
+          Head Length: 0.30000001192092896
+          Head Radius: 0.10000000149011612
+          Name: Slalom Back
+          Shaft Length: 1
+          Shaft Radius: 0.05000000074505806
+          Shape: Arrow
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /talos/dummydetections/slalom_back
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1239,25 +1661,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 3.963423728942871
+      Distance: 6.238035678863525
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.1655287742614746
-        Y: -0.6029131412506104
-        Z: -0.22101613879203796
+        X: 0.6802157163619995
+        Y: -0.85527104139328
+        Z: -0.4287146329879761
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.4797973334789276
+      Pitch: 0.6747971177101135
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 6.217700004577637
+      Yaw: 5.407708644866943
     Saved: ~
 Window Geometry:
   Actuators:
@@ -1283,7 +1705,7 @@ Window Geometry:
     collapsed: false
   ParamPanel:
     collapsed: false
-  QMainWindow State: 000000ff00000000fd0000000300000000000002be000003a0fc0200000003fb0000001200530065006c0065006300740069006f006e010000003d0000039e0000000000000000fb0000001e0054006f006f006c002000500072006f0070006500720074006900650073010000003d0000039e0000000000000000fc0000003a000003a00000025c0100001afa000000000100000003fb000000180043006f006e00740072006f006c00500061006e0065006c0100000000000002190000009500fffffffb00000018004d0061007000700069006e006700500061006e0065006c0100000000ffffffff000001ba00fffffffb0000001e0045006c0065006300740072006900630061006c00500061006e0065006c0100000000ffffffff000001db00ffffff00000001000002c5000003a0fc0200000002fc0000003a00000213000001000100001afa000000000100000002fb00000018004d0069007300730069006f006e00500061006e0065006c0100000000ffffffff0000012300fffffffb0000001800420061006700670069006e006700500061006e0065006c0100000000ffffffff0000018600fffffffc0000025100000189000001890100001afa000000000100000006fb00000012004100630074007500610074006f007200730100000000ffffffff0000014600fffffffb0000002000460065006500640066006f0072007700610072006400500061006e0065006c0100000000ffffffff0000012900fffffffb000000200044006900610067006e006f0073007400690063007300500061006e0065006c0100000000ffffffff000000bb00fffffffb000000140050006100720061006d00500061006e0065006c01000005f200000148000000a600fffffffb000000100044006900730070006c0061007900730100000000ffffffff0000014f00fffffffb0000000a005600690065007700730100000000ffffffff000001f600ffffff000000030000073a0000003afc0100000001fb0000000800540069006d006500000000000000073a000002f400ffffff000001af000003a000000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000003000000000000020b0000039efc0200000003fb0000001200530065006c0065006300740069006f006e010000003d0000039e0000000000000000fb0000001e0054006f006f006c002000500072006f0070006500720074006900650073010000003d0000039e0000000000000000fc0000003d0000039e0000024d0100001cfa000000000100000003fb000000180043006f006e00740072006f006c00500061006e0065006c0100000000000002190000008a00fffffffb00000018004d0061007000700069006e006700500061006e0065006c0100000000ffffffff0000018a00fffffffb0000001e0045006c0065006300740072006900630061006c00500061006e0065006c0100000000ffffffff000001c100ffffff00000001000002320000039efc0200000002fc0000003d00000214000001090100001cfa000000000100000002fb00000018004d0069007300730069006f006e00500061006e0065006c0100000000ffffffff0000012600fffffffb0000001800420061006700670069006e006700500061006e0065006c0100000000ffffffff0000016a00fffffffc0000025700000184000001840100001cfa000000040100000006fb00000012004100630074007500610074006f007200730100000000ffffffff0000013000fffffffb0000002000460065006500640066006f0072007700610072006400500061006e0065006c0100000000ffffffff0000010800fffffffb000000200044006900610067006e006f0073007400690063007300500061006e0065006c0100000000ffffffff000000a900fffffffb000000140050006100720061006d00500061006e0065006c01000005f200000148000000b000fffffffb000000100044006900730070006c0061007900730100000000ffffffff0000015600fffffffb0000000a005600690065007700730100000000ffffffff0000010000ffffff000000030000073a0000003afc0100000001fb0000000800540069006d006500000000000000073a000002fb00ffffff000002f10000039e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Time:
     collapsed: false
   Views:
