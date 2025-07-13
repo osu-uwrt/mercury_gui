@@ -4,19 +4,18 @@
 #include <rviz_common/config.hpp>
 #include <QTimer>
 #include <QMessageBox>
-#include <std_srvs/srv/set_bool.hpp>
-#include <std_srvs/srv/trigger.hpp>
+#include <std_msgs/msg/bool.hpp>
+#include <std_msgs/msg/empty.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <riptide_msgs2/msg/actuator_status.hpp>
 #include "ui_Actuators.h"
-
-#include "riptide_rviz/GuiSrvClient.hpp"
 
 using namespace std::chrono_literals;
 
 namespace riptide_rviz
 {
-    using Trigger = std_srvs::srv::Trigger;
-    using SetBool = std_srvs::srv::SetBool;
+    using Empty = std_msgs::msg::Empty;
+    using Bool = std_msgs::msg::Bool;
     using ActuatorStatus = riptide_msgs2::msg::ActuatorStatus;
 
     class Actuators : public rviz_common::Panel
@@ -44,19 +43,11 @@ namespace riptide_rviz
 
     private:
         void statusCallback(const riptide_msgs2::msg::ActuatorStatus::SharedPtr msg);
-        void updateStatus(const QString& status, const QString& color);
-        void callTriggerService(GuiSrvClient<Trigger>::SharedPtr client);
-        void callSetBoolService(GuiSrvClient<SetBool>::SharedPtr client, bool value);
-
-        template<typename T>
-        void serviceResponseCb(const std::string& srvName, typename rclcpp::Client<T>::SharedResponse response)
-        {
-            std::string successStr = (response->success ? "Succeeded" : "Failed");
-
-            updateStatus(QString::fromStdString("Call to %1 %2; %3").arg(
-                QString::fromStdString(srvName), QString::fromStdString(successStr), QString::fromStdString(response->message)),
-                (response->success ? "000000" : "FF0000"));
-        }
+        void updateStatus();
+        void cmdFeedbackCb(const std_msgs::msg::String::SharedPtr msg);
+        void cmdStatusCb(const Bool::SharedPtr msg);
+        void pubEmptyTopic(rclcpp::Publisher<Empty>::SharedPtr pub);
+        void pubBoolTopic(rclcpp::Publisher<Bool>::SharedPtr pub, bool value);
 
         // UI Panel instance
         Ui_Actuators *uiPanel;
@@ -67,17 +58,25 @@ namespace riptide_rviz
         //status subscriber
         rclcpp::Subscription<ActuatorStatus>::SharedPtr statusSub;
 
-        //service clients
-        GuiSrvClient<Trigger>::SharedPtr
-            dropperClient,
-            torpedoClient,
-            reloadClient,
-            torpMarkerGoHomeClient,
-            torpMarkerSetHomeClient;
+        // Actuator command calls
+        rclcpp::Publisher<Empty>::SharedPtr
+            dropperTopic,
+            torpedoTopic,
+            reloadTopic,
+            torpMarkerGoHomeTopic,
+            torpMarkerSetHomeTopic,
+            clawSetClosedPosTopic;
 
-        GuiSrvClient<SetBool>::SharedPtr
-            armClient,
-            clawClient;
+        rclcpp::Publisher<Bool>::SharedPtr
+            armTopic,
+            clawTopic;
+
+        // Actuator feedback subscriptions
+        rclcpp::Subscription<std_msgs::msg::String>::SharedPtr cmdFeedback;
+        rclcpp::Subscription<Bool>::SharedPtr cmdStatus;
+
+        std::string latestCmdFeedback;
+        bool latestCmdStatus = false;
     };
 
 } // namespace riptide_rviz

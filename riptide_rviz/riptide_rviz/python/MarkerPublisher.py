@@ -13,7 +13,6 @@ from nav_msgs.msg import Odometry
 from rclpy.duration import Duration
 from rclpy.node import Node
 from std_msgs.msg import ColorRGBA
-from tf2_ros import Buffer, TransformListener
 from transforms3d.euler import euler2quat
 from transforms3d.quaternions import qmult
 from visualization_msgs.msg import Marker, MarkerArray
@@ -134,7 +133,7 @@ class MarkerPublisher(Node):
         self.meshPkg        = self.declareAndReceiveParam("mesh_pkg", "")
         self.meshDir        = self.declareAndReceiveParam("mesh_directory", "")
         self.markerTopic    = self.declareAndReceiveParam("marker_topic", "")
-        self.robot          = self.declareAndReceiveParam("robot", "")
+        self.robot          = self.get_namespace()[1:] #namespace with leading '/' removed is name of robot
         
         markerIdx = 0
         self.markers: 'list[MarkerInfo]' = [
@@ -238,7 +237,7 @@ class MarkerPublisher(Node):
             
             array.markers.append(marker)
 
-        #publish ghost talos of sim true position
+        #publish ghost robot of sim true position
         simGhost = Marker()
         simGhost.header.frame_id = "world"
         simGhost.header.stamp = self.get_clock().now().to_msg()

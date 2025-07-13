@@ -104,20 +104,14 @@ namespace riptide_rviz
             std::bind(&Actuators::statusCallback, this, _1));
 
         //initialize clients
-        dropperClient           = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/command/actuator/dropper", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<Trigger>, this, _1, _2));
-        torpedoClient           = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/command/actuator/torpedo", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<Trigger>, this, _1, _2));
-        reloadClient            = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/command/actuator/notify_reload", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<Trigger>, this, _1, _2));
-        torpMarkerGoHomeClient  = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/command/actuator/torpedo_marker/go_home", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<Trigger>, this, _1, _2));
-        torpMarkerSetHomeClient = std::make_shared<GuiSrvClient<Trigger>>(node, robotNs + "/command/actuator/torpedo_marker/set_home", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<Trigger>, this, _1, _2));
-        armClient               = std::make_shared<GuiSrvClient<SetBool>>(node, robotNs + "/command/actuator/arm", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<SetBool>, this, _1, _2));
-        clawClient              = std::make_shared<GuiSrvClient<SetBool>>(node, robotNs + "/command/actuator/claw", 
-                                    std::bind(&Actuators::updateStatus, this, _1, _2), std::bind(&Actuators::serviceResponseCb<SetBool>, this, _1, _2));
+        dropperTopic           = node->create_publisher<Empty>(robotNs + "/command/actuator/dropper", 10);
+        torpedoTopic           = node->create_publisher<Empty>(robotNs + "/command/actuator/torpedo", 10);
+        reloadTopic            = node->create_publisher<Empty>(robotNs + "/command/actuator/notify_reload", 10);
+        torpMarkerGoHomeTopic  = node->create_publisher<Empty>(robotNs + "/command/actuator/torpedo_marker/go_home", 10);
+        torpMarkerSetHomeTopic = node->create_publisher<Empty>(robotNs + "/command/actuator/torpedo_marker/set_home", 10); 
+        armTopic               = node->create_publisher<Bool>(robotNs + "/command/actuator/arm", 10);
+        clawTopic              = node->create_publisher<Bool>(robotNs + "/command/actuator/claw", 10);
+        clawSetClosedPosTopic  = node->create_publisher<Empty>(robotNs + "/command/actuator/claw/set_closed_pos", 10);
     }
 
 
@@ -132,67 +126,69 @@ namespace riptide_rviz
 
     void Actuators::handleArm()
     {
-        callSetBoolService(armClient, true);
+        pubBoolTopic(armTopic, true);
     }
 
 
     void Actuators::handleDisarm()
     {
-        callSetBoolService(armClient, false);
+        pubBoolTopic(armTopic, false);
     }
 
 
     void Actuators::handleOpenClaw()
     {
-        callSetBoolService(clawClient, true);
+        pubBoolTopic(clawTopic, true);
     }
 
 
     void Actuators::handleCloseClaw()
     {
-        callSetBoolService(clawClient, false);
+        pubBoolTopic(clawTopic, false);
     }
 
 
     void Actuators::handleFireTorpedo()
     {
-        callTriggerService(torpedoClient);
+        pubEmptyTopic(torpedoTopic);
     }
 
 
     void Actuators::handleDropMarker()
     {
-        callTriggerService(dropperClient);
+        pubEmptyTopic(dropperTopic);
     }
 
 
     void Actuators::handleReload()
     {
-        callTriggerService(reloadClient);
+        pubEmptyTopic(reloadTopic);
     }
 
 
     void Actuators::handleClawGoHome()
     {
-        QMessageBox::warning(uiPanel->mainWidget, "Not supported", "This action is not supported yet.");
+        // QMessageBox::warning(uiPanel->mainWidget, "Not supported", "This action is not supported yet.");
+        handleCloseClaw();
     }
 
 
     void Actuators::handleClawSetHome()
     {
-        QMessageBox::warning(uiPanel->mainWidget, "Not supported", "This action is not supported yet.");
+        // QMessageBox::warning(uiPanel->mainWidget, "Not supported", "This action is not supported yet.");
+        pubEmptyTopic(clawSetClosedPosTopic);
     }
 
 
     void Actuators::handleTorpGoHome()
     {
-        callTriggerService(torpMarkerGoHomeClient);
+        pubEmptyTopic(torpMarkerGoHomeTopic);
     }
 
 
     void Actuators::handleTorpSetHome()
     {
-        callTriggerService(torpMarkerSetHomeClient);
+        pubEmptyTopic(torpMarkerSetHomeTopic);
     }
 
 
@@ -244,27 +240,46 @@ namespace riptide_rviz
     }
 
 
-    void Actuators::updateStatus(const QString& status, const QString& color)
+    void Actuators::updateStatus()
     {
+        std::string successStr = (latestCmdStatus ? "Succeeded" : "Failed");
+
+        QString status = QString::fromStdString("Call %1; %2").arg(
+                QString::fromStdString(successStr), QString::fromStdString(latestCmdFeedback));
+        QString color = latestCmdStatus ? "000000" : "FF0000";
+
         RVIZ_COMMON_LOG_INFO(status.toStdString());
         uiPanel->statusBrowser->setText(status);
         uiPanel->statusBrowser->setStyleSheet(tr("QLabel { color: #%1; }").arg(color));
     }
 
-
-    void Actuators::callTriggerService(GuiSrvClient<Trigger>::SharedPtr client)
+    void Actuators::cmdFeedbackCb(const std_msgs::msg::String::SharedPtr msg)
     {
-        Trigger::Request::SharedPtr request = std::make_shared<Trigger::Request>();
-        client->callService(request);
+        latestCmdFeedback = msg->data;
+        updateStatus();
+    }
+
+    void Actuators::cmdStatusCb(const Bool::SharedPtr msg) 
+    {
+        latestCmdStatus = msg->data;
+        updateStatus();
     }
 
 
-    void Actuators::callSetBoolService(GuiSrvClient<SetBool>::SharedPtr client, bool value)
+    void Actuators::pubEmptyTopic(rclcpp::Publisher<Empty>::SharedPtr pub)
     {
-        SetBool::Request::SharedPtr request = std::make_shared<SetBool::Request>();
-        request->data = value;
-        client->callService(request);
+        Empty msg;
+        pub->publish(msg);
     }
+
+
+    void Actuators::pubBoolTopic(rclcpp::Publisher<Bool>::SharedPtr pub, bool value)
+    {
+        Bool msg;
+        msg.data = value;
+        pub->publish(msg);
+    }
+
 } // namespace riptide_rviz
 
 #include <pluginlib/class_list_macros.hpp> // NOLINT

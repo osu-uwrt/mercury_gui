@@ -7,10 +7,13 @@
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <std_msgs/msg/int8.hpp>
+#include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <std_msgs/msg/empty.hpp>
 #include <std_msgs/msg/bool.hpp>
 #include <std_srvs/srv/trigger.hpp>
 #include <std_srvs/srv/set_bool.hpp>
+#include <robot_localization/srv/set_pose.hpp>
 #include <diagnostic_msgs/msg/diagnostic_array.hpp>
 
 #include <interactive_markers/interactive_marker_server.hpp>
@@ -30,6 +33,8 @@
 #include <QMessageBox>
 #include <QString>
 
+#include <vector>
+
 //
 // CONTROLLER SELECTION
 //
@@ -39,11 +44,25 @@
 
 namespace riptide_rviz
 {
+    struct BallastLogData
+    {
+        double
+            depth,
+            regPressure,
+            regHousingPressure,
+            tankPressure;
+        
+        bool
+            exaustState,
+            pressureState,
+            waterState;
+    };
 
     class ControlPanel : public rviz_common::Panel
     {
         using Trigger = std_srvs::srv::Trigger;
         using SetBool = std_srvs::srv::SetBool;
+        using SetPose = robot_localization::srv::SetPose;
         using CalibrateDrag = riptide_msgs2::action::CalibrateDragNew;
         using CalibrateDragGH = rclcpp_action::ClientGoalHandle<CalibrateDrag>;
 
@@ -92,6 +111,20 @@ namespace riptide_rviz
         void handleStopDragCal();
         void handleTriggerDragCal();
 
+        //simualtor apply
+        void simulator_apply_clickec();
+
+        //buoyancy buttons
+        void handleBallastDive();
+        void handleBallastSurface();
+        void handleBallastHold();
+
+        void handleBallastToggleExaust();
+        void handleBallastTogglePressure();
+        void handleBallastToggleWater();
+
+        void startBallastLogData();
+
         //publish the current set point
         void pubCurrentSetpoint();
 
@@ -106,12 +139,24 @@ namespace riptide_rviz
         void updateCalStatus(const std::string& status);
         void callTriggerService(rclcpp::Client<Trigger>::SharedPtr client);
         void callSetBoolService(rclcpp::Client<SetBool>::SharedPtr client, bool value);
+        void callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose);
         void waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client);
         void waitForSetBoolResponse(rclcpp::Client<SetBool>::SharedPtr client);
+        void waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client);
         void setDragCalRunning(bool running);
         void dragGoalResponseCb(const CalibrateDragGH::SharedPtr &goal_handle);
         void dragResultCb(const CalibrateDragGH::WrappedResult &result);
-        
+        void setSolenoidStatuses(const bool statuses[3]);
+        void getSolenoidStatuses(bool statuses[3]);
+        void publishSolenoidStatuses(const bool statuses[3]);
+        bool isBallastStateIllegal(bool statuses[3]);
+        void exaustSolenoidCb(const std_msgs::msg::Bool& msg);
+        void pressureSolenoidCb(const std_msgs::msg::Bool& msg);
+        void waterSolenoidCb(const std_msgs::msg::Bool& msg);
+        void regPressureCallback(const std_msgs::msg::Float32& msg);
+        void regHousingPressureCallback(const std_msgs::msg::Float32& msg);
+        void tankPressureCallback(const std_msgs::msg::Float32& msg);
+        void updateBallastLog(const rclcpp::Time& now);
         void displayPopupWindow(const std::string& warningMessage, const std::string& text);
         bool checkForDuplicateTopics();
         bool last_duplicate_state;
@@ -138,6 +183,18 @@ namespace riptide_rviz
         // internal flags
         bool vehicleEnabled = false;
         bool degreeReadout = true;
+        
+        //buoyancy parameters
+        bool activeBallastEnabled = false;
+
+        //ballast system logging
+        bool ballastLogRunning = false;
+        std::string ballastLogFileName;
+        rclcpp::Time lastBallastLogTime;
+        BallastLogData ballastLogData;
+
+        //pixmap for ballast diagram
+        std::shared_ptr<QPixmap> ballastDiagram;
 
         // QT ui timer for handling data freshness
         QTimer *uiTimer;
@@ -156,6 +213,11 @@ namespace riptide_rviz
         rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr auxPub;
         rclcpp::Publisher<riptide_msgs2::msg::KillSwitchReport>::SharedPtr killStatePub;
         rclcpp::Publisher<std_msgs::msg::Empty>::SharedPtr dragCalTriggerPub;
+        rclcpp::Publisher<std_msgs::msg::String>::SharedPtr clawObjectPub;
+        rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr
+            exaustSolenoidPub,
+            pressureSolenoidPub,
+            waterSolenoidPub;
 
         // ROS Timers
         rclcpp::TimerBase::SharedPtr killPubTimer;
@@ -169,17 +231,28 @@ namespace riptide_rviz
         rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
         rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr selectPoseSub;
 
+        rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr
+            exaustSolenoidSub,
+            pressureSolenoidSub,
+            waterSolenoidSub;
+
+        rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr
+            regPressureSub,
+            regHousingPressureSub,
+            tankPressureSub;
+
         //service clients
         rclcpp::Client<Trigger>::SharedPtr 
-            reloadSolverClient,
-            reloadSmcClient,
-            reloadPidClient,
-            reloadCompleteClient;
+            reloadCompleteClient,
+            reloadLiltankClient;
 
         rclcpp::Client<SetBool>::SharedPtr setTeleopClient;
+
+        rclcpp::Client<SetPose>::SharedPtr setSimPoseClient;
         
         std::shared_future<Trigger::Response::SharedPtr> activeClientFuture;
         std::shared_future<SetBool::Response::SharedPtr> activeSetBoolClientFuture;
+        std::shared_future<SetPose::Response::SharedPtr> activeSetPoseClientFuture;
         int64_t srvReqId;
         rclcpp::Time clientSendTime;
 

@@ -7,9 +7,14 @@
 #include <algorithm>
 #include <iostream>
 #include <QMessageBox>
+#include <QFileDialog>
 #include <signal.h>
+#include <yaml-cpp/yaml.h>
 #include <string>
+#include <fstream>
 
+#include <yaml-cpp/yaml.h>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 
 #include <rviz_common/logging.hpp>
 #include <rviz_common/display_context.hpp>
@@ -24,6 +29,37 @@ using std::placeholders::_2;
 #define SETPOINT_REPUB_PERIOD 1s
 #define SETPOINT_MARKER_SCALE 1.5
 #define EXPECTED_CONTROLLER_DIAG_KEYS 5 //getting unreliable message size data, so this is hard coded :( - this should be the number of keys in the message not the number that should be accessed
+
+template<typename T>
+T getYamlNodeAs(const YAML::Node& n, const std::vector<std::string>& keywords)
+{
+    if(keywords.empty())
+    {
+        throw std::runtime_error("getYamlNodeAs() requires at least one keyword.");
+    }
+
+    YAML::Node node = YAML::Clone(n);
+    
+    try
+    {
+        for(std::string s : keywords)
+        {
+            node = node[s];
+        }
+
+        return node.as<T>();
+    } catch(YAML::Exception& e)
+    {
+        std::string msg = "Failed to parse value at tag " + keywords[0];
+        for(size_t i = 1; i < keywords.size(); i++)
+        {
+            msg +=  " -> " + keywords[i];
+        }
+        
+        msg += ": " + std::string(e.what());
+        throw std::runtime_error(msg);
+    }
+}
 
 const std::string get_hostname()
 {
@@ -106,6 +142,30 @@ namespace riptide_rviz
         connect(uiPanel->dragStop, &QPushButton::clicked, this, &ControlPanel::handleStopDragCal);
         connect(uiPanel->dragTrigger, &QPushButton::clicked, this, &ControlPanel::handleTriggerDragCal);
 
+        //connect simulator apply
+        connect(uiPanel->simulation_apply, &QPushButton::clicked, this, &ControlPanel::simulator_apply_clickec);
+
+        //buoyancy buttons
+        connect(uiPanel->bstCmdDive, &QPushButton::clicked, this, &ControlPanel::handleBallastDive);
+        connect(uiPanel->bstCmdSurface, &QPushButton::clicked, this, &ControlPanel::handleBallastSurface);
+        connect(uiPanel->bstCmdHold, &QPushButton::clicked, this, &ControlPanel::handleBallastHold);
+        connect(uiPanel->bstExaustToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleExaust);
+        connect(uiPanel->bstPressureToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastTogglePressure);
+        connect(uiPanel->bstWaterToggle, &QPushButton::clicked, this, &ControlPanel::handleBallastToggleWater);
+        connect(uiPanel->ballastLogButton, &QPushButton::clicked, this, &ControlPanel::startBallastLogData);
+
+        //initialize buoyancy diagram label
+        std::string ballastDiagramPath = ament_index_cpp::get_package_share_directory("riptide_rviz") + "/icons/ballast.svg";
+        ballastDiagram = std::make_shared<QPixmap>(ballastDiagramPath.c_str());
+        QPixmap scaled = ballastDiagram->scaled(
+            uiPanel->diagramLabel->size(),
+            Qt::KeepAspectRatio,
+            Qt::SmoothTransformation);
+
+        uiPanel->diagramLabel->setPixmap(scaled);
+        uiPanel->diagramLabel->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+        uiPanel->diagramLabel->setScaledContents(false);
+
         RVIZ_COMMON_LOG_INFO("ControlPanel: Initialized panel");
     }
 
@@ -155,6 +215,12 @@ namespace riptide_rviz
         delete str;
         delete configVal;
 
+        //load robot yaml and configure buoyancy parameters if available
+        std::string robotYaml = ament_index_cpp::get_package_share_directory("riptide_descriptions2") + "/config/" + robot_ns.substr(1) + ".yaml";
+        YAML::Node yamlRoot = YAML::LoadFile(robotYaml);
+        activeBallastEnabled = yamlRoot["active_ballast"].IsDefined();
+        uiPanel->tabWidget_2->setTabEnabled(2, activeBallastEnabled);
+
         // create the timer but hold on starting it as things may not have been fully initialized yet
         uiTimer = new QTimer(this);
         connect(uiTimer, &QTimer::timeout, [this](void)
@@ -171,6 +237,31 @@ namespace riptide_rviz
             "goal_pose", rclcpp::SystemDefaultsQoS(),
             std::bind(&ControlPanel::selectedPose, this, _1));
 
+        //solenoid subs
+        exaustSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/exhaust", 10,
+            std::bind(&ControlPanel::exaustSolenoidCb, this, _1));
+        
+        pressureSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/pressure", 10,
+            std::bind(&ControlPanel::pressureSolenoidCb, this, _1));
+            
+        waterSolenoidSub = node->create_subscription<std_msgs::msg::Bool>(
+            robot_ns + "/state/solenoid/water", 10,
+            std::bind(&ControlPanel::waterSolenoidCb, this, _1));
+
+        regPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/regulated", 10,
+            std::bind(&ControlPanel::regPressureCallback, this, _1));
+        
+        regHousingPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/regulator_housing", 10,
+            std::bind(&ControlPanel::regHousingPressureCallback, this, _1));
+        
+        tankPressureSub = node->create_subscription<std_msgs::msg::Float32>(
+            robot_ns + "/state/pressure/tank", 10,
+            std::bind(&ControlPanel::tankPressureCallback, this, _1));
+
         // setup the ROS topics that depend on namespace
         // make publishers
         auxPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/state/aux", rclcpp::SystemDefaultsQoS());
@@ -185,6 +276,12 @@ namespace riptide_rviz
         #endif
         
         dragCalTriggerPub = node->create_publisher<std_msgs::msg::Empty>(robot_ns + "/trigger", rclcpp::SystemDefaultsQoS());
+        clawObjectPub = node->create_publisher<std_msgs::msg::String>(robot_ns + "/simulator/loaded_claw_object", rclcpp::SystemDefaultsQoS());
+
+        //solenoid pubs
+        exaustSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/exhaust", 10);
+        pressureSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/pressure", 10);
+        waterSolenoidPub = node->create_publisher<std_msgs::msg::Bool>(robot_ns + "/command/solenoid/water", 10);
 
         // make ROS Subscribers
         odomSub = node->create_subscription<nav_msgs::msg::Odometry>(
@@ -195,10 +292,8 @@ namespace riptide_rviz
             std::bind(&ControlPanel::diagCallback, this, _1));        
 
         //create service clients
-        reloadSolverClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_thruster_solver_params");
-        reloadSmcClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_smc_params");
-        reloadPidClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_pid_params");
         reloadCompleteClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_complete_controller_params");
+        reloadLiltankClient = node->create_client<Trigger>(robot_ns + "/controller_overseer/update_liltank_controller_params");
 
         //create action clients
         calibrateDrag = rclcpp_action::create_client<CalibrateDrag>(node, robot_ns + "/calibrate_drag_new");
@@ -208,7 +303,14 @@ namespace riptide_rviz
 
         //initialize telop server
         setTeleopClient = node->create_client<SetBool>(robot_ns + "/setTeleop");
-        
+
+        setSimPoseClient = node->create_client<SetPose>(robot_ns+"/set_sim_pose");
+
+        //ballast log init
+        ballastLogRunning = false;
+        lastBallastLogTime = node->get_clock()->now();
+
+        //set up interactive setpoint
         interactiveSetpointMarker.header.frame_id = "world",
         interactiveSetpointMarker.header.stamp = node->get_clock()->now();
         interactiveSetpointMarker.name = "interactive_setpt";
@@ -288,6 +390,33 @@ namespace riptide_rviz
 
         this->lastCommandedPose.position = linear;
         this->lastCommandedPose.orientation = tf2::toMsg(quat);
+
+        //add none as an option to claw object dropdown
+        uiPanel->claw_object->addItem("None");
+
+        //load in objects from simulator yaml
+        std::string simulator_config_file;
+        node->declare_parameter("simulator_config", "");
+        if(node->get_parameter("simulator_config", simulator_config_file)){
+            try
+            {
+                RVIZ_COMMON_LOG_INFO("Loading simulator config at:!");
+                
+                //load yaml
+                YAML::Node simulator_config = YAML::LoadFile(simulator_config_file);
+
+                //iterate through simulator objects to create lists
+                for(auto ti = simulator_config["claw"]["fake_objects"].begin(); ti != simulator_config["claw"]["fake_objects"].end(); ti++){
+                    uiPanel->claw_object->addItem(ti->first.as<std::string>().c_str());
+                }
+            }
+            catch(const std::exception& e)
+            {
+                RVIZ_COMMON_LOG_WARNING("Could not find simualtor config - Its OK...");
+            }
+            
+        }
+
         RVIZ_COMMON_LOG_INFO("ControlPanel: Loading config complete");
     }
 
@@ -296,7 +425,9 @@ namespace riptide_rviz
         #if CONTROLLER_OUTPUT_TYPE == TARGET_POSITION
             this->pidSetptPub->publish(this->lastCommandedPose);
         #else
-            RVIZ_COMMON_LOG_INFO("Not Republishing Set Point: not supported control mode.");
+            if (ctrlMode == riptide_rviz::ControlPanel::control_modes::POSITION) {
+                RVIZ_COMMON_LOG_INFO("Not Republishing Set Point: not supported control mode.");
+            }
         #endif
     }
 
@@ -313,6 +444,19 @@ namespace riptide_rviz
 
     bool ControlPanel::event(QEvent *event)
     {
+        if(event->type() == QEvent::Resize)
+        {
+            if(ballastDiagram)
+            {
+                QPixmap scaled = ballastDiagram->scaled(
+                uiPanel->diagramLabel->size(),
+                Qt::KeepAspectRatio,
+                Qt::TransformationMode::SmoothTransformation);
+    
+                uiPanel->diagramLabel->setPixmap(scaled);
+            }
+        }
+
         return false;
     }
 
@@ -392,7 +536,6 @@ namespace riptide_rviz
                 uiPanel->ctrlModeTele->setEnabled(true);
 
                 callSetBoolService(this->setTeleopClient, false);
-
                 break;
 
             case riptide_rviz::ControlPanel::control_modes::FEEDFORWARD:
@@ -430,14 +573,18 @@ namespace riptide_rviz
                 this->teleopPID = fork();
 
                 if(teleopPID == 0){
-                    RVIZ_COMMON_LOG_INFO("Launching RocketLeague Node");
+                    RVIZ_COMMON_LOG_INFO("Launching teleop Node");
 
                     //set process group id so this can be killed later
                     setpgid(0,0);
 
                     //run rocket leauge node
+                    std::string teleopLaunchArg = "robot:=" + robot_ns.substr(1);
+                    RVIZ_COMMON_LOG_INFO("Teleop using robot name: " + teleopLaunchArg);
+                    char teleopLaunchArgC[32];
+                    strcpy(teleopLaunchArgC, teleopLaunchArg.c_str());
                     char* command = "ros2";
-                    char* commandArgList[] = {"ros2", "run", "riptide_controllers2", "RocketLeague.py"};
+                    char* commandArgList[] = {"ros2", "launch", "riptide_controllers2", "teleop.launch.py", teleopLaunchArgC, nullptr};
 
                     execvp(command, commandArgList);
 
@@ -542,6 +689,11 @@ namespace riptide_rviz
             {
                 uiPanel->ctrlDiveInPlace->setEnabled(true);
             }
+        }
+
+        if(ballastLogRunning)
+        {
+            updateBallastLog(node->get_clock()->now());
         }
     }
 
@@ -693,7 +845,7 @@ namespace riptide_rviz
         linear.z = desiredValues[2];
 
         geometry_msgs::msg::Quaternion angularPosition;
-        // geometry_msgs::msg::Vector3 angularVelocity;
+        geometry_msgs::msg::Vector3 angularVelocity;
         
         // handle publishing the angular command
         if (ctrlMode == riptide_rviz::ControlPanel::control_modes::POSITION || ctrlMode == riptide_rviz::ControlPanel::control_modes::FEEDFORWARD)
@@ -711,13 +863,13 @@ namespace riptide_rviz
 
             // build the angular quat for message
             angularPosition = tf2::toMsg(quat);
-        }else {
-            // // build the vector
-            // angularVelocity.x = desiredValues[3];
-            // angularVelocity.y = desiredValues[4];
-            // angularVelocity.z = desiredValues[5];
+        } else {
+            // build the vector
+            angularVelocity.x = desiredValues[3];
+            angularVelocity.y = desiredValues[4];
+            angularVelocity.z = desiredValues[5];
 
-            QMessageBox::warning(uiPanel->CtrlSendCmd, "Control mode not supported!", "Control mode is not supported by the controller! It will be removed from the panel soon.");
+            // QMessageBox::warning(uiPanel->CtrlSendCmd, "Control mode not supported!", "Control mode is not supported by the controller! It will be removed from the panel soon.");
         }
 
         //assemble pose to command
@@ -743,7 +895,7 @@ namespace riptide_rviz
             auto angCmd = riptide_msgs2::msg::ControllerCommand();
             angCmd.mode = ctrlMode;
             angCmd.setpoint_quat = world_command.orientation;
-            // angCmd.setpoint_vect = angularVelocity;
+            angCmd.setpoint_vect = angularVelocity;
 
             // send the control messages
             ctrlCmdLinPub->publish(linCmd);
@@ -820,6 +972,12 @@ namespace riptide_rviz
         uiPanel->cmdCurrX->setText(QString::number(frame_coordinates.position.x, 'f', 2));
         uiPanel->cmdCurrY->setText(QString::number(frame_coordinates.position.y, 'f', 2));
         uiPanel->cmdCurrZ->setText(QString::number(frame_coordinates.position.z, 'f', 2));
+
+        //add to ballast data to log
+        if(ballastLogRunning)
+        {
+            ballastLogData.depth = msg.pose.pose.position.z;
+        }
     }
     
 
@@ -860,8 +1018,6 @@ namespace riptide_rviz
     void ControlPanel::diagCallback(const diagnostic_msgs::msg::DiagnosticArray &msg){
         
         //add in color changing for boxes...
-        
-    
 
         if(sizeof(msg.status) != 0 ){
 
@@ -875,6 +1031,7 @@ namespace riptide_rviz
                         uiPanel->OdomDiagnostics->setText(QString::fromStdString(msg.status[1].values[i].value));
                     }
                 }
+
             }else if(msg.status[0].name.find("Controller Status Values Length") != std::string::npos){
 
                 int diag_keys = std::stoi(msg.status[0].values[0].value);
@@ -905,9 +1062,23 @@ namespace riptide_rviz
                     if(msg.status[1].values[i].key.find("Linear Error") != std::string::npos){
                         uiPanel->AbsoluteDistance->setText(QString::fromStdString(msg.status[1].values[i].value));
                     }
+
+                    //auto tune status
+                    if(msg.status[1].values[i].key.find("Auto Tune Status") != std::string::npos){
+                        uiPanel->AutoTuneStatus->setText(QString::fromStdString(msg.status[1].values[i].value));
+                    }
+
+                    //auto tune max ticker
+                    if(msg.status[1].values[i].key.find("Auto Tune Ticker") != std::string::npos){
+                        uiPanel->AutoTuneTickerDisp->setText(QString::fromStdString(msg.status[1].values[i].value));
+                    }
             
+                    //autotune dominant axis
+                    if(msg.status[1].values[i].key.find("Auto Tune Dominant Axis") != std::string::npos){
+                        uiPanel->AutoTuneDominantAxisDisp->setText(QString::fromStdString(msg.status[1].values[i].value));
+                    }
                 }         
-            }         
+            }    
         }
     }
     // ROS timer callbacks
@@ -933,14 +1104,7 @@ namespace riptide_rviz
                 callTriggerService(reloadCompleteClient);
                 break;
             case 1:
-                callTriggerService(reloadSmcClient);
-                break;
-            case 2:
-                callTriggerService(reloadPidClient);
-                break;
-            case 3:
-                callTriggerService(reloadSolverClient);
-                break;
+                callTriggerService(reloadLiltankClient);
         }
         
     }
@@ -1153,6 +1317,33 @@ namespace riptide_rviz
         clientSendTime = node->get_clock()->now();
     }
 
+    void ControlPanel::callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose){
+        //check to ensure service is availabl
+        if(!client->wait_for_service(5s)){
+            return;
+        }
+
+        SetPose::Request::SharedPtr request = std::make_shared<SetPose::Request>();
+
+        //fill out request
+        request->pose.pose.pose.position.x = pose[0];
+        request->pose.pose.pose.position.y = pose[1];
+        request->pose.pose.pose.position.z = pose[2];        
+        request->pose.pose.pose.orientation.x = pose[0];
+        request->pose.pose.pose.orientation.y = pose[1];
+        request->pose.pose.pose.orientation.z = pose[2];
+        request->pose.pose.pose.orientation.w = pose[3];
+
+        //send request
+        auto future = client->async_send_request(request);
+        srvReqId = future.request_id;
+        activeSetPoseClientFuture = future.share();
+        QTimer::singleShot(250, 
+            [this, client] () { ControlPanel::waitForSetPoseResponse(client); });
+        auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+        clientSendTime = node->get_clock()->now();
+    }
+
 
     void ControlPanel::waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client)
     {
@@ -1217,6 +1408,34 @@ namespace riptide_rviz
             [this, client] () { ControlPanel::waitForSetBoolResponse(client); });
     }
 
+    void ControlPanel::waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client){
+        if(!activeSetPoseClientFuture.valid())
+        {
+            return;
+        }
+
+        auto futureStatus = activeSetPoseClientFuture.wait_for(10ms);
+        if(futureStatus != std::future_status::timeout)
+        {
+            //success
+            rclcpp::Client<SetPose>::SharedResponse response = activeSetPoseClientFuture.get();
+            return;
+        }
+
+        //not ready yet
+        auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+        rclcpp::Time currentTime = node->get_clock()->now();
+        if(currentTime - clientSendTime > 5s)
+        {
+            client->remove_pending_request(srvReqId);
+            return;
+        }
+
+        //schedule next check
+        QTimer::singleShot(250, 
+            [this, client] () { ControlPanel::waitForSetPoseResponse(client); });
+    }
+
 
     void ControlPanel::setDragCalRunning(bool running)
     {
@@ -1257,6 +1476,245 @@ namespace riptide_rviz
 
         setDragCalRunning(false);
     }
+
+    void ControlPanel::setSolenoidStatuses(const bool statuses[3])
+    {
+        uiPanel->bstExaustToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[0] ? "red" : "green")));
+        uiPanel->bstPressureToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[1] ? "red" : "green")));
+        uiPanel->bstWaterToggle->setStyleSheet(tr("QPushButton{color:black; background: %1;}").arg((statuses[2] ? "red" : "green")));
+
+        uiPanel->bstExaustToggle->setText((statuses[0] ? "Close" : "Open"));
+        uiPanel->bstPressureToggle->setText((statuses[1] ? "Close" : "Open"));
+        uiPanel->bstWaterToggle->setText((statuses[2] ? "Close" : "Open"));
+    }
+
+    void ControlPanel::getSolenoidStatuses(bool statuses[3])
+    {
+        statuses[0] = uiPanel->bstExaustToggle->text() == "Close";
+        statuses[1] = uiPanel->bstPressureToggle->text() == "Close";
+        statuses[2] = uiPanel->bstWaterToggle->text() == "Close";
+    }
+
+    void ControlPanel::publishSolenoidStatuses(const bool statuses[3])
+    {
+        std_msgs::msg::Bool msg;
+        
+        //exaust solenoid
+        msg.data = statuses[0];
+        exaustSolenoidPub->publish(msg);
+        
+        //pressure solenoid
+        msg.data = statuses[1];
+        pressureSolenoidPub->publish(msg);
+
+        //water solenoid
+        msg.data = statuses[2];
+        waterSolenoidPub->publish(msg);
+    }
+
+    bool ControlPanel::isBallastStateIllegal(bool statuses[3])
+    {
+        // any state having exaust and pressure open is illegal and could result in bad
+        return statuses[0] && statuses[1];
+    }
+
+    void ControlPanel::exaustSolenoidCb(const std_msgs::msg::Bool& msg)
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[0] = msg.data;
+        setSolenoidStatuses(s);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.exaustState = msg.data;
+        }
+    }
+
+    void ControlPanel::pressureSolenoidCb(const std_msgs::msg::Bool& msg)
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[1] = msg.data;
+        setSolenoidStatuses(s);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.pressureState = msg.data;
+        }
+    }
+
+    void ControlPanel::waterSolenoidCb(const std_msgs::msg::Bool& msg)
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[2] = msg.data;
+        setSolenoidStatuses(s);
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.waterState = msg.data;
+        }
+    }
+
+    void ControlPanel::regPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->regulatedPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.regPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::regHousingPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->regHousingPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.regHousingPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::tankPressureCallback(const std_msgs::msg::Float32& msg)
+    {
+        uiPanel->tankPressure->setText(QString::fromStdString(std::to_string(msg.data)));
+
+        if(ballastLogRunning)
+        {
+            ballastLogData.tankPressure = msg.data;
+        }
+    }
+
+    void ControlPanel::updateBallastLog(const rclcpp::Time& now)
+    {
+        if(now - lastBallastLogTime > 500ms)
+        {
+            //header: seconds, depth, regPressure, regHousingPressure, tankPressure, exaustState, pressureState, waterState
+            std::string line = "";
+            line += std::to_string(now.seconds()) + ",";
+            line += std::to_string(ballastLogData.depth) + ",";
+            line += std::to_string(ballastLogData.regPressure) + ",";
+            line += std::to_string(ballastLogData.regHousingPressure) + ",";
+            line += std::to_string(ballastLogData.tankPressure) + ",";
+            line += std::string(ballastLogData.exaustState ? "true" : "false") + ",";
+            line += std::string(ballastLogData.pressureState ? "true" : "false") + ",";
+            line += std::string(ballastLogData.waterState ? "true" : "false") + "\n";
+    
+            std::ofstream f(ballastLogFileName, std::ios_base::app);
+            f << line;
+            f.close();
+
+            lastBallastLogTime = now;
+        }
+    }
+
+    void ControlPanel::simulator_apply_clickec(){
+        //zero the sim
+        if(uiPanel->zero_simulator->isChecked()){
+
+            //uncheck the box
+            uiPanel->zero_simulator->setChecked(false);
+        }
+
+        //handle combo box
+        std_msgs::msg::String msg;
+        msg.data = uiPanel->claw_object->currentText().toStdString().c_str();
+        clawObjectPub->publish(msg);
+    }
+
+    void ControlPanel::handleBallastDive()
+    {
+        bool s[3] = {true, false, true};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastSurface()
+    {
+        bool s[3] = {false, true, true};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastHold()
+    {
+        bool s[3] = {false, false, false};
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastToggleExaust()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[0] = !s[0];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastTogglePressure()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[1] = !s[1];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
+    void ControlPanel::handleBallastToggleWater()
+    {
+        bool s[3];
+        getSolenoidStatuses(s);
+        s[2] = !s[2];
+        if(isBallastStateIllegal(s))
+        {
+            QMessageBox::critical(nullptr, "Illegal ballast state", "That state is illegal.");
+            return;
+        }
+        publishSolenoidStatuses(s);
+    }
+
+
+    void ControlPanel::startBallastLogData()
+    {
+        if(ballastLogRunning) //stop log
+        {
+            ballastLogRunning = false;
+            uiPanel->ballastLogButton->setText("Start Log");
+        } else
+        {
+            QString logFileName = QFileDialog::getSaveFileName();
+            if(!logFileName.endsWith(".csv"))
+            {
+                logFileName += ".csv";
+            }
+
+            ballastLogFileName = logFileName.toStdString();
+            ballastLogRunning = true;
+            ballastLogData.depth = 0;
+            ballastLogData.regPressure = 0;
+            ballastLogData.regHousingPressure = 0;
+            ballastLogData.tankPressure = 0;
+            ballastLogData.exaustState = false;
+            ballastLogData.pressureState = false;
+            ballastLogData.waterState = false;
+            uiPanel->ballastLogButton->setText("Stop Log");
+            
+            //write header
+            std::string header = "seconds, depth, regPressure, regHousingPressure, tankPressure, exaustState, pressureState, waterState";
+            std::ofstream f(ballastLogFileName, std::ios_base::app);
+            f << header;
+            f.close();
+        }
+    }
+
 
 } // namespace riptide_rviz
 
