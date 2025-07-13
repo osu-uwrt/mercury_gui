@@ -38,7 +38,13 @@ namespace riptide_rviz
 
         // make the publisher for electrical command
         std::string topicName = robotNs.toStdString() + "/command/electrical";
-        pub = node->create_publisher<riptide_msgs2::msg::ElectricalCommand>(topicName, 10);
+        elecPub = node->create_publisher<riptide_msgs2::msg::ElectricalCommand>(topicName, 10);
+
+        // ivc pubs and subs
+        ivcTxPub = node->create_publisher<std_msgs::msg::UInt8>(robotNs.toStdString() + "/ivc/tx", 10);
+        ivcTxSub = node->create_subscription<std_msgs::msg::UInt8>(robotNs.toStdString() + "/ivc/tx", 10, std::bind(&ElectricalPanel::ivcTxCb, this, _1));
+        ivcRxSub = node->create_subscription<std_msgs::msg::UInt8>(robotNs.toStdString() + "/ivc/rx", 10, std::bind(&ElectricalPanel::ivcRxCb, this, _1));
+        ivcSuccessSub = node->create_subscription<riptide_msgs2::msg::UInt8Stamped>(robotNs.toStdString() + "/ivc/tx_success", 10, std::bind(&ElectricalPanel::ivcTxSuccessCb, this, _1));
 
         //make the action client for the imu mag cal
         std::string 
@@ -68,6 +74,7 @@ namespace riptide_rviz
     void ElectricalPanel::onInitialize()
     {
         connect(ui->commandSend, &QPushButton::clicked, this, &ElectricalPanel::sendElectricalCommand);
+        connect(ui->ivcSend, &QPushButton::clicked, this, &ElectricalPanel::sendIvcMsg);
         connect(ui->magCalSend, &QPushButton::clicked, this, &ElectricalPanel::sendMagCal);
 
         connect(ui->imuRead_2, &QPushButton::clicked, this, &ElectricalPanel::readIMU);
@@ -83,6 +90,8 @@ namespace riptide_rviz
 
         ui->registerNum_2->setText("");
         ui->registerData_2->setText("");
+
+        ui->ivcConsole->setTabStopWidth(7);
     }
 
 
@@ -184,7 +193,7 @@ namespace riptide_rviz
         {
             riptide_msgs2::msg::ElectricalCommand msg;
             msg.command = ui->commandSelect->currentIndex();
-            pub->publish(msg);
+            elecPub->publish(msg);
             setStatus("", false);
         } else 
         {
@@ -275,6 +284,37 @@ namespace riptide_rviz
     }
 
 
+    void ElectricalPanel::sendIvcMsg()
+    {
+        int idx = ui->consoleTab->currentIndex();
+        if(idx != 1) // 1 is the index of the ivc console tab
+        {
+            ui->consoleTab->setCurrentIndex(1);
+        }
+
+        int8_t
+            header = ui->ivcHeader->currentIndex(),
+            command = 0;
+        
+        if(header < 2) //indicates status message, use status combo box
+        {
+            command = ui->ivcStatus->currentIndex();
+        } else 
+        {
+            // ... otherwise use generic commmand number
+            command = ui->ivcCommand->value();
+        }
+
+        //now assemble command
+        std_msgs::msg::UInt8 msg;
+        msg.data = (header & 0x7) << 5;
+        msg.data |= command & 0x1F;
+
+        // ...and send
+        ivcTxPub->publish(msg);
+    }
+
+
     void ElectricalPanel::setStatus(const QString& status, bool error)
     {
         ui->errLabel->setText(status);
@@ -287,6 +327,18 @@ namespace riptide_rviz
         {
             RVIZ_COMMON_LOG_INFO(status.toStdString());
         }
+    }
+
+
+    void ElectricalPanel::appendIvcConsole(const QString& prefix, const uint8_t& msg)
+    {
+        uint8_t
+            header = (msg & 0xE0) >> 5,
+            data = msg & 0x1F;
+
+        ui->ivcConsole->append(prefix + ": " + 
+                                QString::fromStdString(std::to_string(header)) + " - " +
+                                QString::fromStdString(std::to_string(data)));
     }
 
 
@@ -355,6 +407,24 @@ namespace riptide_rviz
 
         imuCalInProgress = false;
         ui->magCalSend->setText("Calibrate");
+    }
+
+
+    void ElectricalPanel::ivcTxCb(const std_msgs::msg::UInt8::SharedPtr msg)
+    {
+        appendIvcConsole("[ SEND --> ] ", msg->data);
+    }
+
+
+    void ElectricalPanel::ivcRxCb(const std_msgs::msg::UInt8::SharedPtr msg)
+    {
+        appendIvcConsole("[ RECV <-- ] ", msg->data);
+    }
+
+
+    void ElectricalPanel::ivcTxSuccessCb(const riptide_msgs2::msg::UInt8Stamped::SharedPtr msg)
+    {
+        appendIvcConsole("\t[ CONFIRM ]", msg->data);
     }
 
 
