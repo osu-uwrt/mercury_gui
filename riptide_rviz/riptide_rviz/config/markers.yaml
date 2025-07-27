@@ -97,13 +97,13 @@
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
-      marker16:
+      marker15:
         mesh: table_bottle_yellow
         frame: table_bottle_yellow_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
-      marker17:
+      marker16:
         mesh: table_spoon_pink
         frame: table_spoon_pink_frame
         scale: [1.0, 1.0, 1.0]
