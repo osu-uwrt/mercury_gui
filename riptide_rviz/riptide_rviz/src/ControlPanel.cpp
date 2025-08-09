@@ -1303,7 +1303,7 @@ namespace riptide_rviz
 
     void ControlPanel::callSetBoolService(rclcpp::Client<SetBool>::SharedPtr client, bool value){
         //check to ensure service is availabl
-        if(!client->wait_for_service(5s)){
+        if(!client->wait_for_service(500ms)){
             return;
         }
 
