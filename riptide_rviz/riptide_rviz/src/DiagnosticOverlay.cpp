@@ -193,7 +193,6 @@ namespace riptide_rviz
         addText(pressureLedLabel);
         addText(leakLedLabel);
         addText(cpuTempLabel);
-        addText(batterySocLabel);
     }
 
     void DiagnosticOverlay::updateNS(){
