@@ -11,6 +11,7 @@
 #include <std_msgs/msg/float32.hpp>
 #include <riptide_msgs2/msg/electrical_command.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
+#include <riptide_msgs2/msg/battery_status.hpp>
 
 #include <rviz_common/properties/string_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
@@ -39,6 +40,7 @@ namespace riptide_rviz
         void leakCallback(const std_msgs::msg::Bool& msg);
         void gyroCallback(const riptide_msgs2::msg::GyroStatus& msg);
         void pressureCallback(const std_msgs::msg::Float32& msg);
+        void batteryCallback(const riptide_msgs2::msg::BatteryStatus& msg);
 
         void checkTimeout();
 
@@ -52,8 +54,8 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp, lastBattery;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut, batteryTimedOut;
 
         bool startedLeaking = false;
         bool redFlash = true;
@@ -66,6 +68,7 @@ namespace riptide_rviz
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr leakSub;
         rclcpp::Subscription<riptide_msgs2::msg::GyroStatus>::SharedPtr gyroSub;
         rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pressureSub;
+        rclcpp::Subscription<riptide_msgs2::msg::BatteryStatus>:: SharedPtr batterySub;
 
         // Battery kill publisher
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
@@ -79,6 +82,8 @@ namespace riptide_rviz
         int dfcLedConfigId = -1;
         int leakLedConfigId = -1;
         int pressureLedConfigId = -1;
+        int portBatterySocTextId = -1;
+        int stbdBatterySocTextId = -1;
 
         // font configuration info
         QStringList fontFamilies;
@@ -135,6 +140,17 @@ namespace riptide_rviz
             QColor(255, 0, 0, 255)
         };
 
+        PaintedTextConfig portBatterySocConfig = {
+            132, 85, 0, 0, "P:0%",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
+        
+        PaintedTextConfig stbdBatterySocConfig = {
+            132, 100, 0, 0, "S:0%", 
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
 
 
         // Gauge display elements

@@ -48,6 +48,7 @@ namespace riptide_rviz
         lastLeak = node->get_clock()->now() - 1h;
         lastGyro = node->get_clock()->now() - 1h;
         lastCpuTemp = node->get_clock()->now() - 1h;
+        lastBattery = node->get_clock()->now() - 1h;
 
         // sub to gyro status
         std::string gyroTopic = robotNsProperty->getStdString() + "/gyro/status";
@@ -89,6 +90,11 @@ namespace riptide_rviz
             batteryKillTopic, 10  // 10 prevents mismatched QoS
         );
 
+        std::string batteryInfoTopic = robotNsProperty->getStdString() + "/state/battery";
+        batterySub = node->create_subscription<riptide_msgs2::msg::BatteryStatus>(
+            batteryInfoTopic, rclcpp::SystemDefaultsQoS(), std::bind(&DiagnosticOverlay::batteryCallback, this, _1)
+        );
+
         // watchdog timers for handling timeouts
         checkTimer = node->create_wall_timer(0.25s, std::bind(&DiagnosticOverlay::checkTimeout, this));
 
@@ -116,6 +122,14 @@ namespace riptide_rviz
 
         leakLedConfig.inner_color_ = QColor(255, 0, 255, 255);
         leakLedConfigId = addCircle(leakLedConfig);
+
+        portBatterySocConfig.text_color_ = QColor(255, 255, 0, 255);
+        portBatterySocConfig.text_ = "P:??%";
+        portBatterySocTextId = addText(portBatterySocConfig);
+        
+        stbdBatterySocConfig.text_color_ = QColor(255, 255, 0, 255);
+        stbdBatterySocConfig.text_ = "S:??%";
+        stbdBatterySocTextId = addText(stbdBatterySocConfig);
 
         // add the static design items
         PaintedTextConfig diagLedLabel = {
@@ -161,6 +175,13 @@ namespace riptide_rviz
             QColor(255, 255, 255, 255)
         };
 
+        PaintedTextConfig batterySocLabel = {
+            135, 70, 0, 0, "SOC",
+            fontName, false, 2 ,12,
+            QColor(255, 255, 255, 255)
+        };
+
+        
         // init temperature gauge
         tempGaugeArcId = addArc(tempGaugeArc);
         tempGaugeIndicatorId = addArc(tempGaugeIndicator);
@@ -179,6 +200,7 @@ namespace riptide_rviz
         addText(pressureLedLabel);
         addText(leakLedLabel);
         addText(cpuTempLabel);
+        addText(batterySocLabel);
     }
 
     void DiagnosticOverlay::updateNS(){
@@ -481,6 +503,50 @@ namespace riptide_rviz
         updateText(tempTextId, tempTextConfig);
     }
 
+    void DiagnosticOverlay::batteryCallback(const riptide_msgs2::msg::BatteryStatus& msg) {
+        auto node = context_->getRosNodeAbstraction().lock()->get_raw_node();
+        lastBattery = node->get_clock()->now();
+        batteryTimedOut = false;
+
+        int soc = msg.soc;
+
+        if (msg.detect == riptide_msgs2::msg::BatteryStatus::DETECT_PORT) {
+            // Handle PORT battery
+            int portBatterySoc = soc;
+            
+            // Update PORT battery color
+            if (soc < 20) {
+                portBatterySocConfig.text_color_ = QColor(255, 0, 0, 255);
+            } else if (soc < 50) {
+                portBatterySocConfig.text_color_ = QColor(255, 255, 0, 255);
+            } else {
+                portBatterySocConfig.text_color_ = QColor(0, 255, 0, 255);
+            }
+            
+            portBatterySocConfig.text_ = "P:" + std::to_string(soc) + "%";
+            updateText(portBatterySocTextId, portBatterySocConfig);
+            
+        } else if (msg.detect == riptide_msgs2::msg::BatteryStatus::DETECT_STBD) {
+            // Handle STARBOARD battery
+            int stbdBatterySoc = soc;
+            
+            // Update STARBOARD battery color
+            if (soc < 20) {
+                stbdBatterySocConfig.text_color_ = QColor(255, 0, 0, 255);
+            } else if (soc < 50) {
+                stbdBatterySocConfig.text_color_ = QColor(255, 255, 0, 255);
+            } else {
+                stbdBatterySocConfig.text_color_ = QColor(0, 255, 0, 255);
+            }
+            
+            stbdBatterySocConfig.text_ = "S:" + std::to_string(soc) + "%";
+            updateText(stbdBatterySocTextId, stbdBatterySocConfig);
+            
+        } else {
+            RVIZ_COMMON_LOG_WARNING_STREAM("DiagnosticOverlay: Unknown battery detect value: " << (int)msg.detect);
+        }
+    }
+
     
     void DiagnosticOverlay::onEnable(){
         OverlayDisplay::onEnable();
@@ -608,6 +674,23 @@ namespace riptide_rviz
             updateArc(cpuTempGaugeIndicatorId, cpuTempGaugeIndicator);
             updateText(cpuTempTextId, cpuTempTextConfig);
         }
+
+        duration = node-> get_clock()->now() - lastBattery;
+        if (duration > std::chrono::duration<double>(10.0)) {
+        if (!batteryTimedOut) {
+            RVIZ_COMMON_LOG_WARNING("DiagnosticsOverlay: Battery SOC timed out!");
+            batteryTimedOut = true;
+        }
+
+        // Fix variable names: remove 'b' and 'b' prefixes
+        stbdBatterySocConfig.text_color_ = QColor(255, 0, 255, 255);
+        stbdBatterySocConfig.text_ = "S:--%";
+        portBatterySocConfig.text_color_ = QColor(255, 0, 255, 255);
+        portBatterySocConfig.text_ = "P:--%";
+        
+        updateText(stbdBatterySocTextId, stbdBatterySocConfig);
+        updateText(portBatterySocTextId, portBatterySocConfig);
+    }
     }
 
     void DiagnosticOverlay::reset(){

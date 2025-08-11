@@ -205,7 +205,7 @@ namespace riptide_rviz
                                         msg->dropper_state != ActuatorStatus::DROPPER_DROPPING);
         uiPanel->ctrlArm->setEnabled(!armed);
         uiPanel->ctrlDisarm->setEnabled(armed);
-        uiPanel->ctrlOpenClaw->setEnabled(msg->claw_state == ActuatorStatus::CLAW_CLOSED || msg->claw_state == ActuatorStatus::CLAW_UNKNOWN);
+        uiPanel->ctrlOpenClaw->setEnabled(msg->claw_state == ActuatorStatus::CLAW_SPOON_CLOSED || msg->claw_state == ActuatorStatus::CLAW_UNKNOWN);
         uiPanel->ctrlCloseClaw->setEnabled(msg->claw_state == ActuatorStatus::CLAW_OPENED || msg->claw_state == ActuatorStatus::CLAW_UNKNOWN);
         uiPanel->ctrlFireTorpedo->setEnabled(msg->torpedo_state == ActuatorStatus::TORPEDO_CHARGED);
         uiPanel->ctrlDropMarker->setEnabled(msg->dropper_state == ActuatorStatus::DROPPER_READY);
