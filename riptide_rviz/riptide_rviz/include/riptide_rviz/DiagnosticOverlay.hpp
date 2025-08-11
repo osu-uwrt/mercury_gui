@@ -136,13 +136,13 @@ namespace riptide_rviz
         };
         
         PaintedTextConfig stbdBatterySocConfig = {
-            12, 0, 0, 0, "S:0%", 
+            70, 0, 0, 0, "S:0%", 
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
 
         PaintedTextConfig portBatterySocConfig = {
-            70, 0, 0, 0, "P:0%",
+            12, 0, 0, 0, "P:0%",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
