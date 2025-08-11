@@ -54,8 +54,8 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp, lastBattery;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut, batteryTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp, stbdlastBattery, portlastBattery;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut, stbdBatteryTimedOut, portBatteryTimedOut;
 
         bool startedLeaking = false;
         bool redFlash = true;
@@ -74,7 +74,6 @@ namespace riptide_rviz
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
         
         // ids for rendering items so that we can edit them
-        int voltageTextId = -1;
         int pvtTextId = -1;
         int diagLedConfigId = -1;
         int killLedConfigId = -1;
@@ -129,29 +128,24 @@ namespace riptide_rviz
             QColor(255, 0, 255, 255),
             QColor(0, 0, 0, 255)
         };
-        PaintedTextConfig voltageConfig = {
-            12, 0, 0, 0, "00.00 V",
-            fontName, false, 2, 12,
-            QColor(255, 0, 0, 255)
-        };
+        
         PaintedTextConfig pvtConfig = {
             130, 0, 0, 0, "0.000000",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
-
-        PaintedTextConfig portBatterySocConfig = {
-            132, 85, 0, 0, "P:0%",
-            fontName, false, 2, 12,
-            QColor(255, 0, 0, 255)
-        };
         
         PaintedTextConfig stbdBatterySocConfig = {
-            132, 100, 0, 0, "S:0%", 
+            12, 0, 0, 0, "S:0%", 
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
 
+        PaintedTextConfig portBatterySocConfig = {
+            70, 0, 0, 0, "P:0%",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
 
         // Gauge display elements
         PaintedArcConfig tempGaugeArc{
