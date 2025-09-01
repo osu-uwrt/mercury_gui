@@ -11,6 +11,7 @@
 #include <std_msgs/msg/float32.hpp>
 #include <riptide_msgs2/msg/electrical_command.hpp>
 #include <riptide_msgs2/msg/gyro_status.hpp>
+#include <riptide_msgs2/msg/battery_status.hpp>
 
 #include <rviz_common/properties/string_property.hpp>
 #include <rviz_common/properties/float_property.hpp>
@@ -39,6 +40,7 @@ namespace riptide_rviz
         void leakCallback(const std_msgs::msg::Bool& msg);
         void gyroCallback(const riptide_msgs2::msg::GyroStatus& msg);
         void pressureCallback(const std_msgs::msg::Float32& msg);
+        void batteryCallback(const riptide_msgs2::msg::BatteryStatus& msg);
 
         void checkTimeout();
 
@@ -52,8 +54,8 @@ namespace riptide_rviz
         rclcpp::TimerBase::SharedPtr checkTimer;
 
         // times for stamping
-        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp;
-        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut;
+        rclcpp::Time lastDiag, lastKill, lastZed, lastDfc, lastLeak, lastGyro, lastPressure, lastCpuTemp, stbdlastBattery, portlastBattery;
+        bool diagsTimedOut, killTimedOut, zedTimedOut, dfcTimedOut, leakTimedOut, gyroTimedOut, pressureTimedOut, cpuTempTimedOut, stbdBatteryTimedOut, portBatteryTimedOut;
 
         bool startedLeaking = false;
         bool redFlash = true;
@@ -66,12 +68,12 @@ namespace riptide_rviz
         rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr leakSub;
         rclcpp::Subscription<riptide_msgs2::msg::GyroStatus>::SharedPtr gyroSub;
         rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr pressureSub;
+        rclcpp::Subscription<riptide_msgs2::msg::BatteryStatus>:: SharedPtr batterySub;
 
         // Battery kill publisher
         rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr batteryKillPub;
         
         // ids for rendering items so that we can edit them
-        int voltageTextId = -1;
         int pvtTextId = -1;
         int diagLedConfigId = -1;
         int killLedConfigId = -1;
@@ -79,6 +81,8 @@ namespace riptide_rviz
         int dfcLedConfigId = -1;
         int leakLedConfigId = -1;
         int pressureLedConfigId = -1;
+        int portBatterySocTextId = -1;
+        int stbdBatterySocTextId = -1;
 
         // font configuration info
         QStringList fontFamilies;
@@ -124,18 +128,24 @@ namespace riptide_rviz
             QColor(255, 0, 255, 255),
             QColor(0, 0, 0, 255)
         };
-        PaintedTextConfig voltageConfig = {
-            12, 0, 0, 0, "00.00 V",
-            fontName, false, 2, 12,
-            QColor(255, 0, 0, 255)
-        };
+        
         PaintedTextConfig pvtConfig = {
             130, 0, 0, 0, "0.000000",
             fontName, false, 2, 12,
             QColor(255, 0, 0, 255)
         };
+        
+        PaintedTextConfig stbdBatterySocConfig = {
+            70, 0, 0, 0, "S:0%", 
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
 
-
+        PaintedTextConfig portBatterySocConfig = {
+            12, 0, 0, 0, "P:0%",
+            fontName, false, 2, 12,
+            QColor(255, 0, 0, 255)
+        };
 
         // Gauge display elements
         PaintedArcConfig tempGaugeArc{

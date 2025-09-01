@@ -12,44 +12,100 @@
         pose: [0.0, -1.5, 0.0, 0.0, 0.0, 0.0] # xyzrpw
         color: [0.0, 0.0, 0.0, 0.0]           # rgba
       marker1:
-        mesh: clockwise
-        frame: gate_hot_frame
+        mesh: reefshark
+        frame: gate_reefshark_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
       marker2:
-        mesh: counterclockwise
-        frame: gate_cold_frame
+        mesh: sawfish
+        frame: gate_sawfish_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
       marker3:
-        mesh: buoy
-        frame: buoy_frame
+        mesh: slalom
+        frame: slalom_front_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
       marker4:
+        mesh: slalom
+        frame: slalom_middle_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker5:
+        mesh: slalom
+        frame: slalom_back_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker6:
         mesh: torpedo
         frame: torpedo_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
-      marker5:
+      marker7:
         mesh: bin
         frame: bin_target_frame
         scale: [1.0, 1.0, 1.0]
         pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 0.0, 0.0]
-      marker6:
+      marker8:
+        mesh: table
+        frame: table_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker9:
+        mesh: reefshark
+        frame: table_reefshark_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker10:
+        mesh: sawfish
+        frame: table_sawfish_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker11:
         mesh: arrow
         frame: simulator/torpedo
         scale: [1.0, 0.05, 0.05]
         pose: [0.0, 0.1, 0.2548, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 1.0, 1.0]
-      marker7:
+      marker12:
         mesh: arrow
         frame: simulator/torpedo
         scale: [1.0, 0.05, 0.05]
         pose: [0.0, 0.1, -0.2548, 0.0, 0.0, 0.0]
         color: [0.0, 0.0, 1.0, 1.0]
+
+      # table objects
+      marker13:
+        mesh: table_basket_pink
+        frame: table_basket_pink_frame
+        scale: [0.5, 0.5, 0.5]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker14:
+        mesh: table_basket_yellow
+        frame: table_basket_yellow_frame
+        scale: [0.5, 0.5, 0.5]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker15:
+        mesh: table_bottle_yellow
+        frame: table_bottle_yellow_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]
+      marker16:
+        mesh: table_spoon_pink
+        frame: table_spoon_pink_frame
+        scale: [1.0, 1.0, 1.0]
+        pose: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        color: [0.0, 0.0, 0.0, 0.0]

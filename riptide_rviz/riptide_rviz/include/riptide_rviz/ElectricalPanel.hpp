@@ -5,12 +5,15 @@
 #include <rviz_common/panel.hpp>
 #include <QTimer>
 
+#include <std_msgs/msg/u_int8.hpp>
+
 #include <riptide_msgs2/msg/electrical_command.hpp>
 #include <riptide_msgs2/msg/imu_config.hpp>
 #include <riptide_msgs2/action/mag_cal.hpp>
 #include <riptide_msgs2/action/tare_gyro.hpp>
 #include <riptide_msgs2/action/depressurize.hpp>
 #include <riptide_msgs2/srv/query_imu_serial.hpp>
+#include <riptide_msgs2/msg/u_int8_stamped.hpp>
 
 #include "ui_ElectricalPanel.h"
 
@@ -53,23 +56,29 @@ namespace riptide_rviz
         void sendMagCal();
         void sendTareGyro();
 
-        void depressurizeGoalResponseCb(const DepressurizeGoalHandle::SharedPtr & goal_handle);
-        void depressurizeFeedbackCb(DepressurizeGoalHandle::SharedPtr, const std::shared_ptr<const Depressurize::Feedback> feedback);
-        void depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result);
+        void sendIvcMsg();
 
+        
         void writeIMU();
         void readIMU();
         void saveImuSettings();
-
+        
         private:
         void setStatus(const QString& status, bool error);
+        void appendIvcConsole(const QString& prefix, const uint8_t& msg);
         void magCalGoalResponseCb(const MagGoalHandle::SharedPtr & goal_handle);
         void magCalFeedbackCb(
             MagGoalHandle::SharedPtr,
             const std::shared_ptr<const MagCal::Feedback> feedback);
         void magCalResultCb(const MagGoalHandle::WrappedResult & result);
+        void ivcTxCb(const std_msgs::msg::UInt8::SharedPtr msg);
+        void ivcRxCb(const std_msgs::msg::UInt8::SharedPtr msg);
+        void ivcTxSuccessCb(const riptide_msgs2::msg::UInt8Stamped::SharedPtr msg);
         void tareGyroGoalResponseCb(const TareGyroGoalHandle::SharedPtr & goal_handle);
         void tareGyroResultCb(const TareGyroGoalHandle::WrappedResult & result);
+        void depressurizeGoalResponseCb(const DepressurizeGoalHandle::SharedPtr & goal_handle);
+        void depressurizeFeedbackCb(DepressurizeGoalHandle::SharedPtr, const std::shared_ptr<const Depressurize::Feedback> feedback);
+        void depressurizeResultCb(const DepressurizeGoalHandle::WrappedResult & result);
         Qt::CheckState processCheckState(bool state);
 
 
@@ -98,7 +107,15 @@ namespace riptide_rviz
         bool imuHsiOutput = false;
         int imuConvergenceRate = 1; 
 
-        rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr pub;
+        rclcpp::Publisher<riptide_msgs2::msg::ElectricalCommand>::SharedPtr elecPub;
+
+        rclcpp::Publisher<std_msgs::msg::UInt8>::SharedPtr ivcTxPub;
+        rclcpp::Subscription<std_msgs::msg::UInt8>::SharedPtr 
+            ivcTxSub,
+            ivcRxSub;
+
+        rclcpp::Subscription<riptide_msgs2::msg::UInt8Stamped>::SharedPtr ivcSuccessSub;
+
         rclcpp_action::Client<MagCal>::SharedPtr imuCalClient;
         rclcpp_action::Client<TareGyro>::SharedPtr tareGyroClient;
         rclcpp_action::Client<Depressurize>::SharedPtr depressurizeClient;
