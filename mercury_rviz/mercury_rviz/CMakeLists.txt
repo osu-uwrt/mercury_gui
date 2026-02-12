@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(riptide_rviz)
+project(mercury_rviz)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -17,14 +17,14 @@ find_package(tinyxml2_vendor REQUIRED)
 # find message deps
 find_package(nav_msgs REQUIRED)
 find_package(launch_msgs REQUIRED)
-find_package(riptide_msgs2 REQUIRED)
+find_package(mercury_msgs2 REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(chameleon_tf_msgs REQUIRED)
 find_package(interactive_markers REQUIRED)
-find_package(riptide_meshes REQUIRED)
+find_package(mercury_meshes REQUIRED)
 
 find_package(zed_msgs QUIET) #not required because we will handle it if we cant find this. Its only installed on certain computers
 
@@ -50,7 +50,7 @@ include_directories(include)
 file(GLOB SRC_FILES ${PROJECT_SOURCE_DIR}/src/*.cpp)
 
 # pick up headers to moc
-file(GLOB MOC_HEADERS ${PROJECT_SOURCE_DIR}/include/riptide_rviz/*.hpp)
+file(GLOB MOC_HEADERS ${PROJECT_SOURCE_DIR}/include/mercury_rviz/*.hpp)
 
 file(GLOB UIS ${PROJECT_SOURCE_DIR}/src/*.ui)
 
@@ -74,7 +74,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE ROBOT_NS="talos")
 add_executable(recipe_parser_test tests/recipe_parser_tests.cpp src/bringup_recipe.cpp)
 
 target_include_directories(recipe_parser_test PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/riptide_rviz>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/mercury_rviz>
   $<INSTALL_INTERFACE:include>)
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
@@ -97,7 +97,7 @@ set(deps
   tf2
   rviz_common 
   rviz_rendering 
-  riptide_msgs2
+  mercury_msgs2
   tf2_geometry_msgs
   geometry_msgs
   std_msgs
@@ -107,7 +107,7 @@ set(deps
   diagnostic_msgs
   chameleon_tf_msgs
   interactive_markers
-  riptide_meshes
+  mercury_meshes
   robot_localization
 )
 
