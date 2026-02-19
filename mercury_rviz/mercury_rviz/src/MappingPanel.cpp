@@ -105,6 +105,11 @@ namespace riptide_rviz
                 std::bind(&MappingPanel::setStatus, this, _1, _2), 
                 std::bind(&MappingPanel::serviceResponseCb<Trigger>, this, _1, _2));
         #endif
+
+        captureImageClient = std::make_shared<GuiSrvClient<Trigger>>(
+            node, robotNs + "/capture_image", 
+            std::bind(&MappingPanel::setStatus, this, _1, _2), 
+            std::bind(&MappingPanel::serviceResponseCb<Trigger>, this, _1, _2));
     
         // initialize mapping target stuff
         mappingTargetInfoSub = node->create_subscription<riptide_msgs2::msg::MappingTargetInfo>(robotNs + "/state/mapping", 10,
@@ -145,6 +150,7 @@ namespace riptide_rviz
         connect(ui->zedSvoStopButton, &QPushButton::clicked, this, &MappingPanel::zedSvoStop);
         connect(ui->dfcRecordingStartButton, &QPushButton::clicked, this, &MappingPanel::dfcRecordStart);
         connect(ui->dfcRecordingStopButton, &QPushButton::clicked, this, &MappingPanel::dfcRecordStop);
+        connect(ui->captureImageButton, &QPushButton::clicked, this, &MappingPanel::captureImage);
     }
 
     void MappingPanel::calibMapFrame()
@@ -307,6 +313,11 @@ namespace riptide_rviz
             QMessageBox::warning(ui->form, "Not Supported",
                 "This feature is not available until you build rviz with zed_msgs installed.");
         #endif
+    }
+
+    void MappingPanel::captureImage()
+    {
+        captureImageClient->callService(std::make_shared<std_srvs::srv::Trigger::Request>());
     }
 
     void MappingPanel::setStatus(const QString& text, const QString &color)
