@@ -1,61 +1,61 @@
-#ifndef RIPTIDE_RVIZ_DIAGNOSTICS_PANEL_HPP
-#define RIPTIDE_RVIZ_DIAGNOSTICS_PANEL_HPP
+#pragma once
 
-#include <rclcpp/rclcpp.hpp>
-#include <rviz_common/panel.hpp>
-#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <QIcon>
+#include <QMap>
+#include <QPainter>
 #include <QStandardItemModel>
 #include <QTimer>
-#include <QIcon>
-#include <QPainter>
-#include <QMap>
+#include <diagnostic_msgs/msg/diagnostic_array.hpp>
+#include <rclcpp/rclcpp.hpp>
+#include <rviz_common/panel.hpp>
 
 // Forward declaration of UI
-namespace Ui {
+namespace Ui
+{
 class DiagnosticsPanel;
 }
 
-namespace riptide_rviz
+namespace mercury_rviz
 {
-    class DiagnosticsPanel : public rviz_common::Panel
-    {
-        Q_OBJECT
 
-    public:
-        explicit DiagnosticsPanel(QWidget *parent = nullptr);
-        ~DiagnosticsPanel() override;
+class DiagnosticsPanel : public rviz_common::Panel
+{
+  Q_OBJECT
 
-        void onInitialize() override;
-        void load(const rviz_common::Config &config) override;
-        void save(rviz_common::Config config) const override;
-        bool event(QEvent *event) override;
+public:
+  explicit DiagnosticsPanel(QWidget * parent = nullptr);
+  ~DiagnosticsPanel() override;
 
-    private slots:
-        void refresh();
-        void waitForRefresh();
+  void onInitialize() override;
+  void load(const rviz_common::Config & config) override;
+  void save(rviz_common::Config config) const override;
+  bool event(QEvent * event) override;
 
-    private:
-        Ui::DiagnosticsPanel *uiPanel;
-        QStandardItemModel *model;
-        std::string robot_ns;
+private slots:
+  void refresh();
+  void waitForRefresh();
 
-        // Status icons
-        QMap<int, QIcon> statusIcons;
-        void createStatusIcons();
-        
-        // Helper method to find items by path
-        void findMatchingItems(QStandardItem* item, const QString& path, QList<QStandardItem*>& results);
+private:
+  Ui::DiagnosticsPanel * uiPanel;
+  QStandardItemModel * model;
+  std::string robot_ns;
 
-        // ROS Subscribers
-        rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
+  // Status icons
+  QMap<int, QIcon> statusIcons;
+  void createStatusIcons();
 
-        // Timer for refresh operations
-        int timerTick;
+  // Helper method to find items by path
+  void findMatchingItems(
+    QStandardItem * item, const QString & path, QList<QStandardItem *> & results);
 
-        // Callback for diagnostics messages
-        void diagCb(const diagnostic_msgs::msg::DiagnosticArray & msg);
-    };
+  // ROS Subscribers
+  rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
 
-} // namespace riptide_rviz
+  // Timer for refresh operations
+  int timerTick;
 
-#endif // RIPTIDE_RVIZ_DIAGNOSTICS_PANEL_HPP
+  // Callback for diagnostics messages
+  void diagCb(const diagnostic_msgs::msg::DiagnosticArray & msg);
+};
+
+}  // namespace mercury_rviz

@@ -1,7 +1,7 @@
 /**/marker_publisher:
   ros__parameters:
     update_period: 0.1
-    mesh_pkg: riptide_meshes
+    mesh_pkg: mercury_meshes
     mesh_directory: meshes
     marker_topic: mapping_markers
     markers:

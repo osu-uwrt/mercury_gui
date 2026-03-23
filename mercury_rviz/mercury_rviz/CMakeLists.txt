@@ -16,8 +16,7 @@ find_package(tinyxml2_vendor REQUIRED)
 
 # find message deps
 find_package(nav_msgs REQUIRED)
-find_package(launch_msgs REQUIRED)
-find_package(mercury_msgs2 REQUIRED)
+find_package(mercury_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
@@ -68,14 +67,7 @@ add_library(${PROJECT_NAME} SHARED
             ${UI_HEADERS}
 )
 
-target_compile_definitions(${PROJECT_NAME} PRIVATE ROBOT_NS="talos")
-
-# TODO: Maybe make bringup_recipe it's own library?
-add_executable(recipe_parser_test tests/recipe_parser_tests.cpp src/bringup_recipe.cpp)
-
-target_include_directories(recipe_parser_test PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/mercury_rviz>
-  $<INSTALL_INTERFACE:include>)
+target_compile_definitions(${PROJECT_NAME} PRIVATE ROBOT_NS="mercury")
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
 
@@ -90,20 +82,19 @@ pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
 
 # Link ament packages
 set(deps
-  rclcpp 
+  rclcpp
   rclcpp_action
   ament_index_cpp
   yaml-cpp
   tf2
-  rviz_common 
-  rviz_rendering 
-  mercury_msgs2
+  rviz_common
+  rviz_rendering
+  mercury_msgs
   tf2_geometry_msgs
   geometry_msgs
   std_msgs
   std_srvs
   nav_msgs
-  launch_msgs
   diagnostic_msgs
   chameleon_tf_msgs
   interactive_markers
@@ -116,29 +107,21 @@ if(zed_msgs_FOUND)
     ${deps}
     zed_msgs
   )
-  
+
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     USE_ZED_MSGS)
 endif()
 
-ament_target_dependencies(${PROJECT_NAME} 
+ament_target_dependencies(${PROJECT_NAME}
   ${deps}
 )
 
 # Link non ament packages
-target_link_libraries(${PROJECT_NAME} 
+target_link_libraries(${PROJECT_NAME}
   Qt5::Widgets
   rviz_ogre_vendor::OgreMain
   rviz_ogre_vendor::OgreOverlay
   tinyxml2
-)
-
-target_link_libraries(recipe_parser_test
-  tinyxml2
-)
-
-ament_target_dependencies(recipe_parser_test
-  ament_index_cpp
 )
 
 # Export old-style CMake variables
@@ -164,7 +147,7 @@ install(
 )
 
 file(GLOB python_programs python/*.py)
-install(PROGRAMS 
+install(PROGRAMS
   ${python_programs}
   DESTINATION lib/${PROJECT_NAME}
 )
@@ -174,16 +157,9 @@ install(
   DESTINATION include/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch recipes
+install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME})
 
-install(DIRECTORY tests/recipes
-  DESTINATION share/${PROJECT_NAME}/tests)
-
-install(TARGETS recipe_parser_test
-  DESTINATION lib/${PROJECT_NAME}
-)
-  
 install(
   DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/icons"
   DESTINATION "share/${PROJECT_NAME}"
