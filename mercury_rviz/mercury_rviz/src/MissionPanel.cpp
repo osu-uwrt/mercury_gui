@@ -48,7 +48,7 @@ void MissionPanel::load(const rviz_common::Config & config)
     robot_ns = str->toStdString();
   } else {
     // default value
-    robot_ns = "/talos";
+    robot_ns = "/mercury";
     RVIZ_COMMON_LOG_WARNING("MissionPanel: Loading default value for 'namespace'");
   }
 

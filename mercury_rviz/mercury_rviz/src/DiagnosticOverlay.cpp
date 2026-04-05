@@ -23,7 +23,7 @@ DiagnosticOverlay::DiagnosticOverlay()
   }
 
   robotNsProperty = new rviz_common::properties::StringProperty(
-    "robot_namespace", "/talos", "Robot namespace to attach to", this, SLOT(updateNS()));
+    "robot_namespace", "/mercury", "Robot namespace to attach to", this, SLOT(updateNS()));
 
   timeoutProperty = new rviz_common::properties::FloatProperty(
     "diagnostic_timeout", 10.0, "Maximum time between diagnostic packets before default", this);

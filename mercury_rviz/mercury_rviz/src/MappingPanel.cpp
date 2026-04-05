@@ -59,7 +59,7 @@ void MappingPanel::load(const rviz_common::Config & config)
   rviz_common::Panel::load(config);
   RVIZ_COMMON_LOG_INFO("MappingPanel: Loaded parent panel config");
 
-  robotNs = getFromConfig(config, "robot_namespace", "/talos");
+  robotNs = getFromConfig(config, "robot_namespace", "/mercury");
   ui->worldFrame->setText(QString::fromStdString(getFromConfig(config, "worldFrameName", "world")));
   ui->tagFrame->setText(QString::fromStdString(getFromConfig(config, "tagFrameName", "tag_36h11")));
   ui->numSamples->setValue(std::stoi(getFromConfig(config, "mapCalibNumSamples", "10")));

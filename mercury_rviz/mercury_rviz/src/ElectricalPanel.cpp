@@ -27,9 +27,9 @@ void ElectricalPanel::load(const rviz_common::Config & config)
 {
   config.mapGetString("robot_namespace", &robotNs);
   if (robotNs == "") {
-    robotNs = QString::fromStdString("/talos");
+    robotNs = QString::fromStdString("/mercury");
     RVIZ_COMMON_LOG_WARNING(
-      "ElectricalPanel: Using /talos as the default value for robot_namespace");
+      "ElectricalPanel: Using /mercury as the default value for robot_namespace");
   }
 
   auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();

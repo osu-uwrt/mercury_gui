@@ -26,9 +26,9 @@ void FeedforwardPanel::load(const rviz_common::Config & config)
 {
   config.mapGetString("robot_namespace", &robotNs);
   if (robotNs == "") {
-    robotNs = QString::fromStdString("/talos");
+    robotNs = QString::fromStdString("/mercury");
     RVIZ_COMMON_LOG_WARNING(
-      "FeedforwardPanel: Using /talos as the default value for robot_namespace");
+      "FeedforwardPanel: Using /mercury as the default value for robot_namespace");
   }
 
   //create ROS peripherals
