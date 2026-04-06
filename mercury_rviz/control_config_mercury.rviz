@@ -23,29 +23,29 @@ Panels:
     Name: ControlPanel
     max_depth_in_place: -0.5
     odom_timeout: 2.5
-    robot_namespace: /talos
+    robot_namespace: /mercury
     tgt_in_place_depth: -0.75
   - Class: mercury_rviz/MappingPanel
     Name: MappingPanel
     mapCalibNumSamples: 10
-    robot_namespace: /talos
+    robot_namespace: /mercury
     tagFrameName: estimated_origin_frame
     worldFrameName: world
   - Class: mercury_rviz/ElectricalPanel
     Name: ElectricalPanel
-    robot_namespace: /talos
+    robot_namespace: /mercury
   - Class: mercury_rviz/MissionPanel
     Name: MissionPanel
-    robot_namespace: /talos
+    robot_namespace: /mercury
   - Class: mercury_rviz/FeedforwardPanel
     Name: FeedforwardPanel
-    robot_namespace: /talos
+    robot_namespace: /mercury
   - Class: mercury_rviz/ParamPanel
     Name: ParamPanel
-    robot_namespace: /talos
+    robot_namespace: /mercury
   - Class: mercury_rviz/DiagnosticsPanel
     Name: DiagnosticsPanel
-    robot_namespace: /talos
+    robot_namespace: /mercury
 Visualization Manager:
   Class: ""
   Displays:
@@ -97,7 +97,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /talos/ffc/zed_node/point_cloud/cloud_registered
+        Value: /mercury/ffc/zed_node/point_cloud/cloud_registered
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
@@ -110,7 +110,7 @@ Visualization Manager:
       height: 200
       hor_alignment: left
       hor_dist: 0
-      robot_namespace: /talos
+      robot_namespace: /mercury
       ver_alignment: top
       ver_dist: 0
       width: 220
@@ -138,7 +138,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /talos/robot_description
+        Value: /mercury/robot_description
       Enabled: true
       Links:
         All Links Enabled: true
@@ -164,7 +164,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /talos/mapping_markers
+        Value: /mercury/mapping_markers
       Value: true
     - Class: rviz_default_plugins/InteractiveMarkers
       Enable Transparency: true
@@ -210,7 +210,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/gate
+            Value: /mercury/mapping/gate
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -245,7 +245,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/gate_reefshark
+            Value: /mercury/mapping/gate_reefshark
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -280,7 +280,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/gate_sawfish
+            Value: /mercury/mapping/gate_sawfish
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -315,7 +315,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/slalom_red
+            Value: /mercury/mapping/slalom_red
           Value: false
         - Alpha: 1
           Axes Length: 1
@@ -350,7 +350,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/slalom_front
+            Value: /mercury/mapping/slalom_front
           Value: false
         - Alpha: 1
           Axes Length: 1
@@ -385,7 +385,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/slalom_middle
+            Value: /mercury/mapping/slalom_middle
           Value: false
         - Alpha: 1
           Axes Length: 1
@@ -420,7 +420,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/slalom_back
+            Value: /mercury/mapping/slalom_back
           Value: false
         - Alpha: 1
           Axes Length: 1
@@ -455,7 +455,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/torpedo
+            Value: /mercury/mapping/torpedo
           Value: false
         - Alpha: 1
           Axes Length: 1
@@ -490,7 +490,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/torpedo_shark_hole
+            Value: /mercury/mapping/torpedo_shark_hole
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -525,7 +525,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/torpedo_sawfish_hole
+            Value: /mercury/mapping/torpedo_sawfish_hole
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -560,7 +560,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/bin_target
+            Value: /mercury/mapping/bin_target
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -595,7 +595,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/table
+            Value: /mercury/mapping/table
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -630,7 +630,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/table_reefshark
+            Value: /mercury/mapping/table_reefshark
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -665,7 +665,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/mapping/table_sawfish
+            Value: /mercury/mapping/table_sawfish
           Value: true
       Enabled: true
       Name: Mapping Objects
@@ -686,7 +686,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_0
+            Value: /mercury/thruster_wrenches/thruster_0
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -705,7 +705,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_1
+            Value: /mercury/thruster_wrenches/thruster_1
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -724,7 +724,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_2
+            Value: /mercury/thruster_wrenches/thruster_2
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -743,7 +743,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_3
+            Value: /mercury/thruster_wrenches/thruster_3
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -762,7 +762,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_4
+            Value: /mercury/thruster_wrenches/thruster_4
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -781,7 +781,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_5
+            Value: /mercury/thruster_wrenches/thruster_5
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -800,7 +800,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_6
+            Value: /mercury/thruster_wrenches/thruster_6
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -819,7 +819,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/thruster_wrenches/thruster_7
+            Value: /mercury/thruster_wrenches/thruster_7
           Torque Arrow Scale: 2
           Torque Color: 204; 204; 51
           Value: true
@@ -860,7 +860,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/bin_target
+            Value: /mercury/dummydetections/bin_target
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -895,7 +895,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/buoy
+            Value: /mercury/dummydetections/buoy
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -930,7 +930,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/slalom_red
+            Value: /mercury/dummydetections/slalom_red
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -965,7 +965,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/slalom_front
+            Value: /mercury/dummydetections/slalom_front
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1000,7 +1000,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/slalom_middle
+            Value: /mercury/dummydetections/slalom_middle
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1035,7 +1035,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/slalom_back
+            Value: /mercury/dummydetections/slalom_back
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1070,7 +1070,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/gate
+            Value: /mercury/dummydetections/gate
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1105,7 +1105,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/gate_reefshark
+            Value: /mercury/dummydetections/gate_reefshark
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1140,7 +1140,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/gate_sawfish
+            Value: /mercury/dummydetections/gate_sawfish
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1175,7 +1175,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/table
+            Value: /mercury/dummydetections/table
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1210,7 +1210,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/table_sawfish
+            Value: /mercury/dummydetections/table_sawfish
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1245,7 +1245,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/table_reefshark
+            Value: /mercury/dummydetections/table_reefshark
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1280,7 +1280,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/torpedo
+            Value: /mercury/dummydetections/torpedo
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1315,7 +1315,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/torpedo_shark_hole
+            Value: /mercury/dummydetections/torpedo_shark_hole
           Value: true
         - Alpha: 1
           Axes Length: 1
@@ -1350,7 +1350,7 @@ Visualization Manager:
             Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /talos/dummydetections/torpedo_sawfish_hole
+            Value: /mercury/dummydetections/torpedo_sawfish_hole
           Value: true
       Enabled: true
       Name: Dummy Detections
@@ -1384,7 +1384,7 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /talos/point_cloud
+        Value: /mercury/point_cloud
       Use Fixed Frame: true
       Use rainbow: true
       Value: false
@@ -1398,7 +1398,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /talos/visualization_marker_array
+        Value: /mercury/visualization_marker_array
       Value: false
   Enabled: true
   Global Options:
