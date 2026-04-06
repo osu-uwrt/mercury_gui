@@ -11,8 +11,9 @@ robot = 'mercury'
 
 config = PathJoinSubstitution([
     get_package_share_directory('mercury_descriptions'),
+    LC("robot"),
     'config',
-    LC("robot_yaml")
+    LC("robot_xacro_yaml")
 ])
 
 rviz_pkg_dir = get_package_share_directory('mercury_rviz')
@@ -37,8 +38,8 @@ def generate_launch_description():
                     default_value=["control_config_", LC("robot"), ".rviz"]
                 ),
 
-                DeclareLaunchArgument('robot_yaml', default_value=[
-                                      LC("robot"), '.yaml']),
+                DeclareLaunchArgument('robot_xacro_yaml', default_value=[
+                                      LC("robot"), '_xacro_frames' '.yaml']),
 
                 # start rviz
                 Node(
@@ -57,17 +58,17 @@ def generate_launch_description():
                 # send the rest into the robot namespace
                 PushRosNamespace(["/", LC('robot')]),
 
-                # # start the thruster wrench visualizer
-                # Node(
-                #     package="mercury_controller",
-                #     executable="thruster_wrench_publisher.py",
-                #     name="thruster_wrench_publisher",
-                #     output="screen",
-                #     parameters=[
-                #         {"vehicle_config": config},
-                #         {"robot": LC("robot")},
-                #     ]
-                # ),
+                # start the thruster wrench visualizer
+                Node(
+                    package="mercury_controller",
+                    executable="thruster_wrench_publisher.py",
+                    name="thruster_wrench_publisher",
+                    output="screen",
+                    parameters=[
+                        {"vehicle_config": config},
+                        {"robot": LC("robot")},
+                    ]
+                ),
 
                 Node(
                     package="mercury_rviz",
