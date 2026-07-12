@@ -57,7 +57,7 @@ void MissionPanel::load(const rviz_common::Config & config)
 
   ledTimer = node->create_wall_timer(50ms, std::bind(&MissionPanel::updateLedReadout, this));
 
-  actionServer = rclcpp_action::create_client<ExecuteTree>(node, robot_ns + "/autonomy/run_tree");
+  actionServer = rclcpp_action::create_client<ExecuteTree>(node, robot_ns + "/autonomy/execute_tree");
 
   stackSub = node->create_subscription<mercury_msgs::msg::TreeStack>(
     robot_ns + "/autonomy/tree_stack", rclcpp::SystemDefaultsQoS(),
@@ -206,7 +206,7 @@ void MissionPanel::startTask()
     }
 
   auto goal = ExecuteTree::Goal();
-  goal.tree = uiPanel->btSelect->currentText().toStdString();
+  goal.tree_path = uiPanel->btSelect->currentText().toStdString();
 
   // create the goal callbacks to bind to
   auto sendGoalOptions = rclcpp_action::Client<ExecuteTree>::SendGoalOptions();
