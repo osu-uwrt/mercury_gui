@@ -36,104 +36,111 @@
 #pragma once
 
 #ifndef Q_MOC_RUN
-    #include <OgreColourValue.h>
-    #include <OgreMaterial.h>
-    #include <rviz_common/properties/enum_property.hpp>
-    #include <rviz_common/properties/int_property.hpp>
-    #include <rviz_common/display.hpp>
-    #include <std_msgs/msg/color_rgba.h>
+#include <OgreColourValue.h>
+#include <OgreMaterial.h>
+#include <std_msgs/msg/color_rgba.h>
 
-    #include "riptide_rviz/overlay_utils.hpp"
+#include <rviz_common/display.hpp>
+#include <rviz_common/properties/enum_property.hpp>
+#include <rviz_common/properties/int_property.hpp>
+#include <vector>
 
-    #include <vector>
+#include "mercury_rviz/overlay_utils.hpp"
 
 #endif
 
-namespace riptide_rviz {
-    struct PaintedTextConfig {
-        int x_, y_, height_, width_;
-        std::string text_, font_name_;
-        bool invert_shadow_;
-        int line_width_, font_size_;
-        QColor text_color_;
-    };
+namespace mercury_rviz
+{
 
-    struct PaintedCircleConfig {
-        int x_, y_, height_, width_;
-        int inner_radius_, outer_radius_;
-        QColor inner_color_, outer_color_;
-    };
+struct PaintedTextConfig
+{
+  int x_, y_, height_, width_;
+  std::string text_, font_name_;
+  bool invert_shadow_;
+  int line_width_, font_size_;
+  QColor text_color_;
+};
 
-    struct PaintedArcConfig {
-        float x_, y_;
-        float radius_;
-        float start_angle_, end_angle_;
-        float line_width_;
-        QColor line_color_;
-    };
+struct PaintedCircleConfig
+{
+  int x_, y_, height_, width_;
+  int inner_radius_, outer_radius_;
+  QColor inner_color_, outer_color_;
+};
 
-    class OverlayDisplay : public rviz_common::Display {
-        Q_OBJECT
-      public:
-        OverlayDisplay();
-        virtual ~OverlayDisplay();
+struct PaintedArcConfig
+{
+  float x_, y_;
+  float radius_;
+  float start_angle_, end_angle_;
+  float line_width_;
+  QColor line_color_;
+};
 
-        virtual void onInitialize() override;
-        virtual void onEnable() override;
-        virtual void onDisable() override;
-        virtual void update(float wall_dt, float ros_dt) override;
-        virtual void reset() override;
+class OverlayDisplay : public rviz_common::Display
+{
+  Q_OBJECT
+public:
+  OverlayDisplay();
+  virtual ~OverlayDisplay();
 
-        // methods to add text and shapes to the renderer
-        int addText(const PaintedTextConfig & config);
-        int addCircle(const PaintedCircleConfig & config);
-        int addArc(const PaintedArcConfig& config);
-        
-        // methods to update text and shape overlays
-        void updateText(int index, const PaintedTextConfig & config);
-        void updateCircle(int index, const PaintedCircleConfig & config);
-        void updateArc(int id, const PaintedArcConfig& config);
+  virtual void onInitialize() override;
+  virtual void onEnable() override;
+  virtual void onDisable() override;
+  virtual void update(float wall_dt, float ros_dt) override;
+  virtual void reset() override;
 
-        void clearElements();
+  // methods to add text and shapes to the renderer
+  int addText(const PaintedTextConfig & config);
+  int addCircle(const PaintedCircleConfig & config);
+  int addArc(const PaintedArcConfig & config);
 
-      protected:
-        // helper functions for drawing text and other things on the base figure
-        void paintText(const PaintedTextConfig & config, QPainter & painter);
-        void paintCircle(const PaintedCircleConfig & config, QPainter & painter);
-        void paintArc(const PaintedArcConfig & config, QPainter & painter);
+  // methods to update text and shape overlays
+  void updateText(int index, const PaintedTextConfig & config);
+  void updateCircle(int index, const PaintedCircleConfig & config);
+  void updateArc(int id, const PaintedArcConfig & config);
 
-        OverlayObject::SharedPtr overlay_;
+  void clearElements();
 
-        int texture_width_;
-        int texture_height_;
-        int horizontal_dist_;
-        int vertical_dist_;
+protected:
+  // helper functions for drawing text and other things on the base figure
+  void paintText(const PaintedTextConfig & config, QPainter & painter);
+  void paintCircle(const PaintedCircleConfig & config, QPainter & painter);
+  void paintArc(const PaintedArcConfig & config, QPainter & painter);
 
-        HorizontalAlignment horizontal_alignment_;
-        VerticalAlignment vertical_alignment_;
+  OverlayObject::SharedPtr overlay_;
 
-        QColor bg_color_;
+  int texture_width_;
+  int texture_height_;
+  int horizontal_dist_;
+  int vertical_dist_;
 
-        bool require_update_texture_;
-        // properties are raw pointers since they are owned by Qt
-        rviz_common::properties::IntProperty *hor_dist_property_;
-        rviz_common::properties::IntProperty *ver_dist_property_;
-        rviz_common::properties::EnumProperty *hor_alignment_property_;
-        rviz_common::properties::EnumProperty *ver_alignment_property_;
-        rviz_common::properties::IntProperty *width_property_;
-        rviz_common::properties::IntProperty *height_property_;
+  HorizontalAlignment horizontal_alignment_;
+  VerticalAlignment vertical_alignment_;
 
-        // vectors for holding each of the object types
-        std::vector<PaintedTextConfig> text_vector_;
-        std::vector<PaintedCircleConfig> circle_vector_;
-        std::vector<PaintedArcConfig> arc_vector_;
+  QColor bg_color_;
 
-      protected Q_SLOTS:
-        void updateHorizontalDistance();
-        void updateVerticalDistance();
-        void updateHorizontalAlignment();
-        void updateVerticalAlignment();
-        void updateWidth();
-        void updateHeight();
-    };
-} // namespace riptide_rviz
+  bool require_update_texture_;
+  // properties are raw pointers since they are owned by Qt
+  rviz_common::properties::IntProperty * hor_dist_property_;
+  rviz_common::properties::IntProperty * ver_dist_property_;
+  rviz_common::properties::EnumProperty * hor_alignment_property_;
+  rviz_common::properties::EnumProperty * ver_alignment_property_;
+  rviz_common::properties::IntProperty * width_property_;
+  rviz_common::properties::IntProperty * height_property_;
+
+  // vectors for holding each of the object types
+  std::vector<PaintedTextConfig> text_vector_;
+  std::vector<PaintedCircleConfig> circle_vector_;
+  std::vector<PaintedArcConfig> arc_vector_;
+
+protected Q_SLOTS:
+  void updateHorizontalDistance();
+  void updateVerticalDistance();
+  void updateHorizontalAlignment();
+  void updateVerticalAlignment();
+  void updateWidth();
+  void updateHeight();
+};
+
+}  // namespace mercury_rviz

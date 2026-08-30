@@ -46,80 +46,74 @@
 #include <Overlay/OgreOverlayElement.h>
 #include <Overlay/OgreOverlayManager.h>
 #include <Overlay/OgrePanelOverlayElement.h>
+
 #include <QColor>
 #include <QImage>
 #include <memory>
 #include <string>
 
-namespace riptide_rviz {
-    class OverlayObject;
+namespace mercury_rviz
+{
 
-    class ScopedPixelBuffer {
-      public:
-        ScopedPixelBuffer(Ogre::HardwarePixelBufferSharedPtr pixel_buffer);
-        virtual ~ScopedPixelBuffer();
-        virtual Ogre::HardwarePixelBufferSharedPtr getPixelBuffer();
-        virtual QImage getQImage(unsigned int width, unsigned int height);
-        virtual QImage getQImage(OverlayObject &overlay);
-        virtual QImage getQImage(unsigned int width, unsigned int height, QColor &bg_color);
-        virtual QImage getQImage(OverlayObject &overlay, QColor &bg_color);
+class OverlayObject;
 
-      protected:
-        Ogre::HardwarePixelBufferSharedPtr pixel_buffer_;
-    };
+class ScopedPixelBuffer
+{
+public:
+  ScopedPixelBuffer(Ogre::HardwarePixelBufferSharedPtr pixel_buffer);
+  virtual ~ScopedPixelBuffer();
+  virtual Ogre::HardwarePixelBufferSharedPtr getPixelBuffer();
+  virtual QImage getQImage(unsigned int width, unsigned int height);
+  virtual QImage getQImage(OverlayObject & overlay);
+  virtual QImage getQImage(unsigned int width, unsigned int height, QColor & bg_color);
+  virtual QImage getQImage(OverlayObject & overlay, QColor & bg_color);
 
-    /*
-    uint8 LEFT = 0
-    uint8 RIGHT = 1
-    uint8 CENTER = 2
-    uint8 TOP = 3
-    uint8 BOTTOM = 4
-    */
+protected:
+  Ogre::HardwarePixelBufferSharedPtr pixel_buffer_;
+};
 
-    enum class VerticalAlignment : uint8_t {
-        CENTER = 2,
-        TOP = 3,
-        BOTTOM = 4,
-    };
+enum class VerticalAlignment : uint8_t {
+  CENTER = 2,
+  TOP = 3,
+  BOTTOM = 4,
+};
 
-    enum class HorizontalAlignment : uint8_t {
-        LEFT = 0,
-        RIGHT = 1,
-        CENTER = 2
-    };
+enum class HorizontalAlignment : uint8_t { LEFT = 0, RIGHT = 1, CENTER = 2 };
 
-    /**
-     * Helper class for realizing an overlay object on top of the rviz 3D panel.
-     *
-     * This class is supposed to be instantiated in the onInitalize method of the
-     * rviz_common::Display class.
-     */
-    class OverlayObject {
-      public:
-        using SharedPtr = std::shared_ptr<OverlayObject>;
+/**
+ * Helper class for realizing an overlay object on top of the rviz 3D panel.
+ *
+ * This class is supposed to be instantiated in the onInitalize method of the
+ * rviz_common::Display class.
+ */
+class OverlayObject
+{
+public:
+  using SharedPtr = std::shared_ptr<OverlayObject>;
 
-        OverlayObject(const std::string &name);
-        virtual ~OverlayObject();
+  OverlayObject(const std::string & name);
+  virtual ~OverlayObject();
 
-        virtual std::string getName() const;
-        virtual void hide();
-        virtual void show();
-        virtual bool isTextureReady() const;
-        virtual void updateTextureSize(unsigned int width, unsigned int height);
-        virtual ScopedPixelBuffer getBuffer();
-        virtual void setPosition(double hor_dist, double ver_dist,
-                                 HorizontalAlignment hor_alignment = HorizontalAlignment::LEFT,
-                                 VerticalAlignment ver_alignment = VerticalAlignment::TOP);
-        virtual void setDimensions(double width, double height);
-        virtual bool isVisible() const;
-        virtual unsigned int getTextureWidth() const;
-        virtual unsigned int getTextureHeight() const;
+  virtual std::string getName() const;
+  virtual void hide();
+  virtual void show();
+  virtual bool isTextureReady() const;
+  virtual void updateTextureSize(unsigned int width, unsigned int height);
+  virtual ScopedPixelBuffer getBuffer();
+  virtual void setPosition(
+    double hor_dist, double ver_dist, HorizontalAlignment hor_alignment = HorizontalAlignment::LEFT,
+    VerticalAlignment ver_alignment = VerticalAlignment::TOP);
+  virtual void setDimensions(double width, double height);
+  virtual bool isVisible() const;
+  virtual unsigned int getTextureWidth() const;
+  virtual unsigned int getTextureHeight() const;
 
-      protected:
-        const std::string name_;
-        Ogre::Overlay *overlay_;
-        Ogre::PanelOverlayElement *panel_;
-        Ogre::MaterialPtr panel_material_;
-        Ogre::TexturePtr texture_;
-    };
-} // namespace rviz_2d_overlay_plugins
+protected:
+  const std::string name_;
+  Ogre::Overlay * overlay_;
+  Ogre::PanelOverlayElement * panel_;
+  Ogre::MaterialPtr panel_material_;
+  Ogre::TexturePtr texture_;
+};
+
+}  // namespace mercury_rviz

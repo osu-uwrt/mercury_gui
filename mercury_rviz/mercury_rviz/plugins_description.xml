@@ -1,57 +1,47 @@
-<library path="riptide_rviz">
-    <class name="riptide_rviz/ControlPanel" type="riptide_rviz::ControlPanel" base_class_type="rviz_common::Panel">
+<library path="mercury_rviz">
+    <class name="mercury_rviz/ControlPanel" type="mercury_rviz::ControlPanel" base_class_type="rviz_common::Panel">
         <description>
             RVIZ plugin for controlling the AUV Underwater
         </description>
     </class>
-    <class name="riptide_rviz/FeedforwardPanel" type="riptide_rviz::FeedforwardPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/FeedforwardPanel" type="mercury_rviz::FeedforwardPanel" base_class_type="rviz_common::Panel">
         <description>
             RVIZ plugin for more easily controlling and tuning the AUV's feedforward forces
         </description>
     </class>
-    <class name="riptide_rviz/ParamPanel" type="riptide_rviz::ParamPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/ParamPanel" type="mercury_rviz::ParamPanel" base_class_type="rviz_common::Panel">
         <description>
             RVIZ plugin for more tuning controller and other params
         </description>
     </class>
-    <class name="riptide_rviz/MissionPanel" type="riptide_rviz::MissionPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/MissionPanel" type="mercury_rviz::MissionPanel" base_class_type="rviz_common::Panel">
         <description>
-            RVIZ plugin for controlling riptide autonomy while underwater
+            RVIZ plugin for controlling mercury autonomy while underwater
         </description>
     </class>
-    <class name="riptide_rviz/Bringup" type="riptide_rviz::Bringup" base_class_type="rviz_common::Panel">
-        <description>
-            RVIZ plugin for starting up the riptide software package on remote targets
-        </description>
-    </class>
-    <class name="riptide_rviz/BaggingPanel" type="riptide_rviz::BaggingPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/BaggingPanel" type="mercury_rviz::BaggingPanel" base_class_type="rviz_common::Panel">
         <description>
             RVIZ plugin for configuring bagging on remote targets
         </description>
     </class>
-    <class name="riptide_rviz/Actuators" type="riptide_rviz::Actuators" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/DiagnosticOverlay" type="mercury_rviz::DiagnosticOverlay" base_class_type="rviz_common::Display">
         <description>
-            RVIZ plugin for controlling the actuators on a riptide vehicle
+            RVIZ Plugin for rendering mercury vehicle diagnostics on the RVIZ display
         </description>
     </class>
-    <class name="riptide_rviz/DiagnosticOverlay" type="riptide_rviz::DiagnosticOverlay" base_class_type="rviz_common::Display">
-        <description>
-            RVIZ Plugin for rendering riptide vehicle diagnostics on the RVIZ display
-        </description>
-    </class>
-    <class name="riptide_rviz/MappingPanel" type="riptide_rviz::MappingPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/MappingPanel" type="mercury_rviz::MappingPanel" base_class_type="rviz_common::Panel">
         <description>
             RVIZ plugin for controlling the map
         </description>
     </class>
-    <class name="riptide_rviz/ElectricalPanel" type="riptide_rviz::ElectricalPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/ElectricalPanel" type="mercury_rviz::ElectricalPanel" base_class_type="rviz_common::Panel">
         <description>
-            RVIZ plugin for commanding robot electronics
+            RVIZ plugin for commanding vehicle electronics
         </description>
     </class>
-    <class name="riptide_rviz/DiagnosticsPanel" type="riptide_rviz::DiagnosticsPanel" base_class_type="rviz_common::Panel">
+    <class name="mercury_rviz/DiagnosticsPanel" type="mercury_rviz::DiagnosticsPanel" base_class_type="rviz_common::Panel">
         <description>
-            RVIZ Plugin for displaying robot diagnostics.
+            RVIZ Plugin for displaying vehicle diagnostics.
         </description>
   </class>
 </library>
