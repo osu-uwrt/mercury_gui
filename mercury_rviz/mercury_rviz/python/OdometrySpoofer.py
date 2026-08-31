@@ -15,18 +15,21 @@ from enum import Enum
 from math import pi
 
 ODOM_TOPIC_HZ = 30
-LINEAR_SNAP_WIDTH = 1 # meters
-ANGULAR_SNAP_WIDTH = 45 # degrees
+LINEAR_SNAP_WIDTH = 1  # meters
+ANGULAR_SNAP_WIDTH = 45  # degrees
 
 # quaternions ordered xyzw
 AXIS_ROTATIONS = [
-    (0, 0, 0, 1), # X
-    (0, 0, 1, 1), # Y
+    (0, 0, 0, 1),  # X
+    (0, 0, 1, 1),  # Y
     (0, 1, 0, 1)  # Z
 ]
 
-# values correspond with array indices
+
 class AxisName(Enum):
+    """
+    values correspond with array indices
+    """
     X_AXIS = 0
     Y_AXIS = 1
     Z_AXIS = 2
@@ -35,14 +38,14 @@ class AxisName(Enum):
 def makeControlForAxis(axis: AxisName, interactMode):
     control = InteractiveMarkerControl()
     control.name = axis.name
-    
+
     orient = AXIS_ROTATIONS[axis.value]
     control.orientation.x = float(orient[0])
     control.orientation.y = float(orient[1])
     control.orientation.z = float(orient[2])
     control.orientation.w = float(orient[3])
     control.interaction_mode = interactMode
-    
+
     return control
 
 
@@ -51,7 +54,7 @@ def pointToVector3(pt: Point):
     vec.x = pt.x
     vec.y = pt.y
     vec.z = pt.z
-    
+
     return vec
 
 
@@ -61,27 +64,30 @@ def snap(value, toNearest):
 
 class OdometrySpoofer(Node):
     pose = Pose()
-    
+
     def __init__(self):
         super().__init__("odometry_spoofer")
         self.timer = self.create_timer(1 / ODOM_TOPIC_HZ, self.timerCb)
         self.markerServer = InteractiveMarkerServer(self, "spoofer")
-        self.odomPub = self.create_publisher(Odometry, "odometry/filtered", qos_profile_system_default)
-        self.textOutPub = self.create_publisher(Marker, "spoofer/text_out", qos_profile_system_default)
+        self.odomPub = self.create_publisher(
+            Odometry, "odometry/filtered", qos_profile_system_default)
+        self.textOutPub = self.create_publisher(
+            Marker, "spoofer/text_out", qos_profile_system_default)
         self.transformBroadcaster = TransformBroadcaster(self)
         ns = self.get_namespace() + "/"
-        self.robotName = ns[1 : ns.find('/', 2)] #starts find after leading slash. if find fails, -1 will wrap to back of string and cut the trailing slash
+        # starts find after leading slash. if find fails, -1 will wrap to back of string and cut the trailing slash
+        self.robotName = ns[1: ns.find('/', 2)]
         self.robotBaseLink = self.robotName + "/base_link"
         self.get_logger().info(f"Using robot name \"{self.robotName}\"")
-        
+
         now = self.get_clock().now().to_msg()
-        
+
         self.interactiveMarker = InteractiveMarker()
         self.interactiveMarker.header.stamp = now
         self.interactiveMarker.header.frame_id = "world"
         self.interactiveMarker.name = self.robotName
-        
-        #visual of object in RViz
+
+        # visual of object in RViz
         self.objectVisualMarker = Marker()
         self.objectVisualMarker.type = Marker.CUBE
         self.objectVisualMarker.color.r = 1.0
@@ -91,13 +97,13 @@ class OdometrySpoofer(Node):
         self.objectVisualMarker.scale.x = 0.1
         self.objectVisualMarker.scale.y = 0.1
         self.objectVisualMarker.scale.z = 0.1
-        
+
         objectVisualControl = InteractiveMarkerControl()
         objectVisualControl.always_visible = True
         objectVisualControl.markers.append(self.objectVisualMarker)
         self.interactiveMarker.controls.append(objectVisualControl)
-        
-        #text output marker
+
+        # text output marker
         self.textOutputMarker = Marker()
         self.textOutputMarker.header.stamp = now
         self.textOutputMarker.header.frame_id = self.robotBaseLink
@@ -115,33 +121,35 @@ class OdometrySpoofer(Node):
         self.textOutputMarker.id = 0
         self.textOutputMarker.lifetime = Duration().to_msg()
         self.textOutputMarker.text = "Spoofer"
-        
-        #control of one degree of freedom
+
+        # control of one degree of freedom
         for axistup in enumerate(AxisName):
             axis = axistup[1]
-            self.interactiveMarker.controls.append(makeControlForAxis(axis, InteractiveMarkerControl.MOVE_AXIS))
-            self.interactiveMarker.controls.append(makeControlForAxis(axis, InteractiveMarkerControl.ROTATE_AXIS))
-        
-        #add interactive marker to server
-        self.markerServer.insert(self.interactiveMarker, feedback_callback=self.markerStateChanged)
+            self.interactiveMarker.controls.append(
+                makeControlForAxis(axis, InteractiveMarkerControl.MOVE_AXIS))
+            self.interactiveMarker.controls.append(
+                makeControlForAxis(axis, InteractiveMarkerControl.ROTATE_AXIS))
+
+        # add interactive marker to server
+        self.markerServer.insert(
+            self.interactiveMarker, feedback_callback=self.markerStateChanged)
         self.markerServer.applyChanges()
-        
+
         self.get_logger().info("Spoofer started.")
-        
-    
+
     def timerCb(self):
         # header to use in Odometry msg and TransformStamped
         header = Header()
         header.stamp = self.get_clock().now().to_msg()
-        header.frame_id = "world"        
-        
+        header.frame_id = "world"
+
         # publish odometry
         odomToPub = Odometry()
         odomToPub.header = header
         odomToPub.child_frame_id = self.robotBaseLink
         odomToPub.pose.pose = self.pose
         self.odomPub.publish(odomToPub)
-        
+
         # publish transform
         transform = TransformStamped()
         transform.header = header
@@ -149,37 +157,39 @@ class OdometrySpoofer(Node):
         transform.transform.translation = pointToVector3(self.pose.position)
         transform.transform.rotation = self.pose.orientation
         self.transformBroadcaster.sendTransform(transform)
-                    
-    
+
     def markerStateChanged(self, msg: InteractiveMarkerFeedback):
-        #snap odometry in accordance to consts at the top of the file
-        self.pose.position.x = float(snap(msg.pose.position.x, LINEAR_SNAP_WIDTH))
-        self.pose.position.y = float(snap(msg.pose.position.y, LINEAR_SNAP_WIDTH))
-        self.pose.position.z = float(snap(msg.pose.position.z, LINEAR_SNAP_WIDTH))
-        
+        # snap odometry in accordance to consts at the top of the file
+        self.pose.position.x = float(
+            snap(msg.pose.position.x, LINEAR_SNAP_WIDTH))
+        self.pose.position.y = float(
+            snap(msg.pose.position.y, LINEAR_SNAP_WIDTH))
+        self.pose.position.z = float(
+            snap(msg.pose.position.z, LINEAR_SNAP_WIDTH))
+
         orient = msg.pose.orientation
         (r, p, y) = quat2euler((orient.w, orient.x, orient.y, orient.z), axes="sxyz")
         angularSnapRads = ANGULAR_SNAP_WIDTH * pi / 180.0
         r = snap(r, angularSnapRads)
         p = snap(p, angularSnapRads)
         y = snap(y, angularSnapRads)
-        
+
         snappedQuat = euler2quat(r, p, y, axes="sxyz")
         orient.w = snappedQuat[0]
         orient.x = snappedQuat[1]
         orient.y = snappedQuat[2]
         orient.z = snappedQuat[3]
         self.pose.orientation = orient
-        
+
         # publish text output marker
         self.textOutputMarker.header.stamp = self.get_clock().now().to_msg()
         self.textOutputMarker.text = f"XYZ: ({self.pose.position.x}, {self.pose.position.y}, {self.pose.position.z})\n" \
-                                    + f"RPY: ({r * 180/pi}, {p * 180/pi}, {y * 180/pi})"
+            + f"RPY: ({r * 180/pi}, {p * 180/pi}, {y * 180/pi})"
         self.textOutPub.publish(self.textOutputMarker)
-        
 
-def main(args = None):
-    rclpy.init(args = args)
+
+def main(args=None):
+    rclpy.init(args=args)
     spoofer = OdometrySpoofer()
     rclpy.spin(spoofer)
     rclpy.shutdown()

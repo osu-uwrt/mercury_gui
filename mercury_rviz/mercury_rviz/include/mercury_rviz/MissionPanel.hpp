@@ -13,75 +13,73 @@
 
 #include "ui_MissionPanel.h"
 
-namespace mercury_rviz
-{
+namespace mercury_rviz {
 
 using ExecuteTree = mercury_msgs::action::ExecuteTree;
 using GHExecuteTree = rclcpp_action::ClientGoalHandle<ExecuteTree>;
 
-class MissionPanel : public rviz_common::Panel
-{
+class MissionPanel : public rviz_common::Panel {
 Q_OBJECT public : MissionPanel(QWidget * parent = 0);
-  ~MissionPanel();
+    ~MissionPanel();
 
-  void load(const rviz_common::Config & config) override;
-  void save(rviz_common::Config config) const override;
-  void onInitialize() override;
+    void load(const rviz_common::Config & config) override;
+    void save(rviz_common::Config config) const override;
+    void onInitialize() override;
 protected Q_SLOTS:
-  // QT slots (function callbacks)
-  void refresh();
-  void handleSelectTree(int);
+    // QT slots (function callbacks)
+    void refresh();
+    void handleSelectTree(int);
 
-  void startTask();
-  void cancelTask();
+    void startTask();
+    void cancelTask();
 
 protected:
-  bool event(QEvent * event);
+    bool event(QEvent * event);
 
-  // action server callbacks
-  void taskStartCb(const GHExecuteTree::SharedPtr & goalHandle);
-  void cancelAccept(const action_msgs::srv::CancelGoal::Response::SharedPtr);
-  void taskCompleteCb(const GHExecuteTree::WrappedResult & result);
-  void taskFeedbackCb(
-    GHExecuteTree::SharedPtr goalHandle, ExecuteTree::Feedback::ConstSharedPtr feedback);
+    // action server callbacks
+    void taskStartCb(const GHExecuteTree::SharedPtr & goalHandle);
+    void cancelAccept(const action_msgs::srv::CancelGoal::Response::SharedPtr);
+    void taskCompleteCb(const GHExecuteTree::WrappedResult & result);
+    void taskFeedbackCb(
+        GHExecuteTree::SharedPtr goalHandle, ExecuteTree::Feedback::ConstSharedPtr feedback);
 
-  //subscriber callback on the tree stack
-  void stackCb(const mercury_msgs::msg::TreeStack & stack);
+    // subscriber callback on the tree stack
+    void stackCb(const mercury_msgs::msg::TreeStack & stack);
 
-  //subscriber callback for led commands
-  void ledCb(const mercury_msgs::msg::LedCommand & cmd);
+    // subscriber callback for led commands
+    void ledCb(const mercury_msgs::msg::LedCommand & cmd);
 
-  // timer callabck for refresh future
-  void waitForRefresh(void);
+    // timer callabck for refresh future
+    void waitForRefresh(void);
 
 private:
-  void updateLedReadout(void);
+    void updateLedReadout(void);
 
-  Ui_MissionPanel * uiPanel;
+    Ui_MissionPanel * uiPanel;
 
-  // tree view item model
-  QStandardItemModel * model;
+    // tree view item model
+    QStandardItemModel * model;
 
-  // stack
-  std::vector<std::string> treeList;
+    // stack
+    std::vector<std::string> treeList;
 
-  // led command
-  mercury_msgs::msg::LedCommand lastLedCommand;
-  rclcpp::TimerBase::SharedPtr ledTimer;
+    // led command
+    mercury_msgs::msg::LedCommand lastLedCommand;
+    rclcpp::TimerBase::SharedPtr ledTimer;
 
-  rclcpp::Subscription<mercury_msgs::msg::TreeStack>::SharedPtr stackSub;
-  rclcpp::Subscription<mercury_msgs::msg::LedCommand>::SharedPtr ledSub;
+    rclcpp::Subscription<mercury_msgs::msg::TreeStack>::SharedPtr stackSub;
+    rclcpp::Subscription<mercury_msgs::msg::LedCommand>::SharedPtr ledSub;
 
-  // refresh request info
-  rclcpp::Client<mercury_msgs::srv::ListTrees>::SharedPtr refreshClient;
-  std::shared_future<std::shared_ptr<mercury_msgs::srv::ListTrees_Response>> refreshFuture;
-  int64_t refreshFutureid = -1;
+    // refresh request info
+    rclcpp::Client<mercury_msgs::srv::ListTrees>::SharedPtr refreshClient;
+    std::shared_future<std::shared_ptr<mercury_msgs::srv::ListTrees_Response>> refreshFuture;
+    int64_t refreshFutureid = -1;
 
-  int timerTick = -1;
+    int timerTick = -1;
 
-  rclcpp_action::Client<ExecuteTree>::SharedPtr actionServer;
+    rclcpp_action::Client<ExecuteTree>::SharedPtr actionServer;
 
-  std::string robot_ns;
+    std::string robot_ns;
 };
 
-}  // namespace mercury_rviz
+} // namespace mercury_rviz

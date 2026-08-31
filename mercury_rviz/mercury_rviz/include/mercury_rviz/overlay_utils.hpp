@@ -52,30 +52,28 @@
 #include <memory>
 #include <string>
 
-namespace mercury_rviz
-{
+namespace mercury_rviz {
 
 class OverlayObject;
 
-class ScopedPixelBuffer
-{
+class ScopedPixelBuffer {
 public:
-  ScopedPixelBuffer(Ogre::HardwarePixelBufferSharedPtr pixel_buffer);
-  virtual ~ScopedPixelBuffer();
-  virtual Ogre::HardwarePixelBufferSharedPtr getPixelBuffer();
-  virtual QImage getQImage(unsigned int width, unsigned int height);
-  virtual QImage getQImage(OverlayObject & overlay);
-  virtual QImage getQImage(unsigned int width, unsigned int height, QColor & bg_color);
-  virtual QImage getQImage(OverlayObject & overlay, QColor & bg_color);
+    ScopedPixelBuffer(Ogre::HardwarePixelBufferSharedPtr pixel_buffer);
+    virtual ~ScopedPixelBuffer();
+    virtual Ogre::HardwarePixelBufferSharedPtr getPixelBuffer();
+    virtual QImage getQImage(unsigned int width, unsigned int height);
+    virtual QImage getQImage(OverlayObject & overlay);
+    virtual QImage getQImage(unsigned int width, unsigned int height, QColor & bg_color);
+    virtual QImage getQImage(OverlayObject & overlay, QColor & bg_color);
 
 protected:
-  Ogre::HardwarePixelBufferSharedPtr pixel_buffer_;
+    Ogre::HardwarePixelBufferSharedPtr pixel_buffer_;
 };
 
 enum class VerticalAlignment : uint8_t {
-  CENTER = 2,
-  TOP = 3,
-  BOTTOM = 4,
+    CENTER = 2,
+    TOP = 3,
+    BOTTOM = 4,
 };
 
 enum class HorizontalAlignment : uint8_t { LEFT = 0, RIGHT = 1, CENTER = 2 };
@@ -86,34 +84,34 @@ enum class HorizontalAlignment : uint8_t { LEFT = 0, RIGHT = 1, CENTER = 2 };
  * This class is supposed to be instantiated in the onInitalize method of the
  * rviz_common::Display class.
  */
-class OverlayObject
-{
+class OverlayObject {
 public:
-  using SharedPtr = std::shared_ptr<OverlayObject>;
+    using SharedPtr = std::shared_ptr<OverlayObject>;
 
-  OverlayObject(const std::string & name);
-  virtual ~OverlayObject();
+    OverlayObject(const std::string & name);
+    virtual ~OverlayObject();
 
-  virtual std::string getName() const;
-  virtual void hide();
-  virtual void show();
-  virtual bool isTextureReady() const;
-  virtual void updateTextureSize(unsigned int width, unsigned int height);
-  virtual ScopedPixelBuffer getBuffer();
-  virtual void setPosition(
-    double hor_dist, double ver_dist, HorizontalAlignment hor_alignment = HorizontalAlignment::LEFT,
-    VerticalAlignment ver_alignment = VerticalAlignment::TOP);
-  virtual void setDimensions(double width, double height);
-  virtual bool isVisible() const;
-  virtual unsigned int getTextureWidth() const;
-  virtual unsigned int getTextureHeight() const;
+    virtual std::string getName() const;
+    virtual void hide();
+    virtual void show();
+    virtual bool isTextureReady() const;
+    virtual void updateTextureSize(unsigned int width, unsigned int height);
+    virtual ScopedPixelBuffer getBuffer();
+    virtual void setPosition(
+        double hor_dist, double ver_dist,
+        HorizontalAlignment hor_alignment = HorizontalAlignment::LEFT,
+        VerticalAlignment ver_alignment = VerticalAlignment::TOP);
+    virtual void setDimensions(double width, double height);
+    virtual bool isVisible() const;
+    virtual unsigned int getTextureWidth() const;
+    virtual unsigned int getTextureHeight() const;
 
 protected:
-  const std::string name_;
-  Ogre::Overlay * overlay_;
-  Ogre::PanelOverlayElement * panel_;
-  Ogre::MaterialPtr panel_material_;
-  Ogre::TexturePtr texture_;
+    const std::string name_;
+    Ogre::Overlay * overlay_;
+    Ogre::PanelOverlayElement * panel_;
+    Ogre::MaterialPtr panel_material_;
+    Ogre::TexturePtr texture_;
 };
 
-}  // namespace mercury_rviz
+} // namespace mercury_rviz

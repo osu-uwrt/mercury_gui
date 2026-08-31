@@ -8,314 +8,298 @@
 using namespace std::chrono_literals;
 using namespace std::placeholders;
 
-namespace mercury_rviz
-{
+namespace mercury_rviz {
 
-MissionPanel::MissionPanel(QWidget * parent) : rviz_common::Panel(parent)
-{
-  setFocusPolicy(Qt::ClickFocus);
+MissionPanel::MissionPanel(QWidget * parent) : rviz_common::Panel(parent) {
+    setFocusPolicy(Qt::ClickFocus);
 
-  uiPanel = new Ui_MissionPanel();
-  uiPanel->setupUi(this);
+    uiPanel = new Ui_MissionPanel();
+    uiPanel->setupUi(this);
 
-  treeList = std::vector<std::string>();
+    treeList = std::vector<std::string>();
 }
 
-void MissionPanel::onInitialize()
-{
-  // create the item model and attach it to the panel
-  model = new QStandardItemModel();
-  uiPanel->btStackView->setModel(model);
+void MissionPanel::onInitialize() {
+    // create the item model and attach it to the panel
+    model = new QStandardItemModel();
+    uiPanel->btStackView->setModel(model);
 
-  // Connect UI signals for controlling the mercury vehicle
-  connect(uiPanel->btSelect, SIGNAL(currentIndexChanged(int)), SLOT(handleSelectTree(int)));
-  connect(uiPanel->btStart, &QPushButton::clicked, [this](void) { startTask(); });
-  connect(uiPanel->btStop, &QPushButton::clicked, [this](void) { cancelTask(); });
-  connect(uiPanel->btRefresh, &QPushButton::clicked, [this](void) { refresh(); });
+    // Connect UI signals for controlling the mercury vehicle
+    connect(uiPanel->btSelect, SIGNAL(currentIndexChanged(int)), SLOT(handleSelectTree(int)));
+    connect(uiPanel->btStart, &QPushButton::clicked, [this](void) { startTask(); });
+    connect(uiPanel->btStop, &QPushButton::clicked, [this](void) { cancelTask(); });
+    connect(uiPanel->btRefresh, &QPushButton::clicked, [this](void) { refresh(); });
 }
 
-void MissionPanel::load(const rviz_common::Config & config)
-{
-  rviz_common::Panel::load(config);
+void MissionPanel::load(const rviz_common::Config & config) {
+    rviz_common::Panel::load(config);
 
-  RVIZ_COMMON_LOG_INFO("MissionPanel: Loaded parent panel config");
+    RVIZ_COMMON_LOG_INFO("MissionPanel: Loaded parent panel config");
 
-  // create our value containers
-  QString * str = new QString();
+    // create our value containers
+    QString * str = new QString();
 
-  // load the namesapce param
-  if (config.mapGetString("robot_namespace", str)) {
-    robot_ns = str->toStdString();
-  } else {
-    // default value
-    robot_ns = "/mercury";
-    RVIZ_COMMON_LOG_WARNING("MissionPanel: Loading default value for 'namespace'");
-  }
+    // load the namesapce param
+    if (config.mapGetString("robot_namespace", str)) {
+        robot_ns = str->toStdString();
+    } else {
+        // default value
+        robot_ns = "/mercury";
+        RVIZ_COMMON_LOG_WARNING("MissionPanel: Loading default value for 'namespace'");
+    }
 
-  // get our local rosnode
-  auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+    // get our local rosnode
+    auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
 
-  ledTimer = node->create_wall_timer(50ms, std::bind(&MissionPanel::updateLedReadout, this));
+    ledTimer = node->create_wall_timer(50ms, std::bind(&MissionPanel::updateLedReadout, this));
 
-  actionServer = rclcpp_action::create_client<ExecuteTree>(node, robot_ns + "/autonomy/execute_tree");
+    actionServer =
+        rclcpp_action::create_client<ExecuteTree>(node, robot_ns + "/autonomy/execute_tree");
 
-  stackSub = node->create_subscription<mercury_msgs::msg::TreeStack>(
-    robot_ns + "/autonomy/tree_stack", rclcpp::SystemDefaultsQoS(),
-    std::bind(&MissionPanel::stackCb, this, _1));
+    stackSub = node->create_subscription<mercury_msgs::msg::TreeStack>(
+        robot_ns + "/autonomy/tree_stack", rclcpp::SystemDefaultsQoS(),
+        std::bind(&MissionPanel::stackCb, this, _1));
 
-  ledSub = node->create_subscription<mercury_msgs::msg::LedCommand>(
-    robot_ns + "/command/led", 10, std::bind(&MissionPanel::ledCb, this, _1));
+    ledSub = node->create_subscription<mercury_msgs::msg::LedCommand>(
+        robot_ns + "/command/led", 10, std::bind(&MissionPanel::ledCb, this, _1));
 
-  refreshClient =
-    node->create_client<mercury_msgs::srv::ListTrees>(robot_ns + "/autonomy/list_trees");
+    refreshClient =
+        node->create_client<mercury_msgs::srv::ListTrees>(robot_ns + "/autonomy/list_trees");
 
-  delete str;
+    delete str;
 
-  // refresh the UI
-  refresh();
+    // refresh the UI
+    refresh();
 }
 
-void MissionPanel::save(rviz_common::Config config) const
-{
-  rviz_common::Panel::save(config);
+void MissionPanel::save(rviz_common::Config config) const {
+    rviz_common::Panel::save(config);
 
-  // write our config values
-  config.mapSetValue("robot_namespace", QString::fromStdString(robot_ns));
+    // write our config values
+    config.mapSetValue("robot_namespace", QString::fromStdString(robot_ns));
 }
 
 bool MissionPanel::event(QEvent * event) { return false; }
 
-MissionPanel::~MissionPanel()
-{
-  // master window control removal
-  delete uiPanel;
+MissionPanel::~MissionPanel() {
+    // master window control removal
+    delete uiPanel;
 
-  delete model;
+    delete model;
 
-  actionServer.reset();
-  refreshClient.reset();
-  stackSub.reset();
+    actionServer.reset();
+    refreshClient.reset();
+    stackSub.reset();
 }
 
-void MissionPanel::refresh()
-{
-  // reset the GUI in case of tree crash
-  if (!uiPanel->btStart->isEnabled()) {
+void MissionPanel::refresh() {
+    // reset the GUI in case of tree crash
+    if (!uiPanel->btStart->isEnabled()) {
+        uiPanel->btStart->setEnabled(true);
+        uiPanel->btStop->setEnabled(false);
+    }
+
+    // get our local rosnode
+    auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+
+    RVIZ_COMMON_LOG_INFO("MissionPanel: Preparing to send refresh request");
+
+    mercury_msgs::srv::ListTrees::Request::SharedPtr startReq =
+        std::make_shared<mercury_msgs::srv::ListTrees::Request>();
+    auto start = node->get_clock()->now();
+    while (!refreshClient->wait_for_service(100ms))
+        if (node->get_clock()->now() - start > 1s || !rclcpp::ok()) {
+            RVIZ_COMMON_LOG_INFO("MissionPanel: Refresh server not online");
+            return;
+        }
+
+    auto refreshFutureInfo = refreshClient->async_send_request(startReq);
+    refreshFuture = refreshFutureInfo.share();
+    refreshFutureid = refreshFutureInfo.request_id;
+
+    // set a timer to get the results so we dont lock the thread :)
+    // clear the timer ticks
+    timerTick = 0;
+
+    RVIZ_COMMON_LOG_INFO("MissionPanel: Scheduled refresh timer");
+
+    // set a oneshot timer for 1s into the future and check status
+    QTimer::singleShot(250, [this]() { waitForRefresh(); });
+}
+
+void MissionPanel::waitForRefresh() {
+    if (!refreshFuture.valid()) {
+        RVIZ_COMMON_LOG_ERROR("BagItem: stop future invalidated while sending request");
+
+        // clear the lookup lockout
+        refreshFutureid = -1;
+
+        // prevent a re-schedule
+        return;
+    }
+
+    // check if future has validated
+    auto futureStatus = refreshFuture.wait_for(10ms);
+    if (futureStatus == std::future_status::timeout && timerTick < 10) {
+        QTimer::singleShot(250, [this]() { waitForRefresh(); });
+
+        timerTick++;
+    } else if (futureStatus != std::future_status::timeout) {
+        // future has come back parse the PID information
+        auto response = refreshFuture.get();
+
+        RVIZ_COMMON_LOG_INFO("MissionPanel: refresh request validated");
+
+        uiPanel->btSelect->clear();
+        uiPanel->btSelect->addItem("None Selected");
+
+        // keep a list of the valid trees
+        treeList.clear();
+        treeList.insert(treeList.end(), response->trees.begin(), response->trees.end());
+
+        for (auto tree : response->trees) {
+            // push these into the combo box
+            uiPanel->btSelect->addItem(QString::fromStdString(tree));
+        }
+    } else if (timerTick == 10) {
+        RVIZ_COMMON_LOG_ERROR("MissionPanel: refresh service never responded");
+
+        // remove the failed request
+        refreshClient->remove_pending_request(refreshFutureid);
+    }
+}
+
+void MissionPanel::handleSelectTree(int selection) {
+    std::string treeFile = uiPanel->btSelect->itemText(selection).toStdString();
+
+    bool found = std::find(treeList.begin(), treeList.end(), treeFile) != treeList.end();
+    if (found) {
+        // enable the start button
+        uiPanel->btStart->setEnabled(true);
+    } else {
+        uiPanel->btStart->setEnabled(false);
+    }
+}
+
+void MissionPanel::startTask() {
+    // disable the start button
+    uiPanel->btStart->setEnabled(false);
+
+    // get our local rosnode
+    auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+
+    auto start = node->get_clock()->now();
+    while (!actionServer->wait_for_action_server(100ms))
+        if (node->get_clock()->now() - start > 1s || !rclcpp::ok()) {
+            // we have timed out waiting, re-enable the button
+            uiPanel->btStart->setEnabled(true);
+            return;
+        }
+
+    auto goal = ExecuteTree::Goal();
+    goal.tree_path = uiPanel->btSelect->currentText().toStdString();
+
+    // create the goal callbacks to bind to
+    auto sendGoalOptions = rclcpp_action::Client<ExecuteTree>::SendGoalOptions();
+    sendGoalOptions.goal_response_callback = std::bind(&MissionPanel::taskStartCb, this, _1);
+    sendGoalOptions.feedback_callback = std::bind(&MissionPanel::taskFeedbackCb, this, _1, _2);
+    sendGoalOptions.result_callback = std::bind(&MissionPanel::taskCompleteCb, this, _1);
+
+    // send the goal with the callbacks configured
+    actionServer->async_send_goal(goal, sendGoalOptions);
+}
+
+void MissionPanel::taskStartCb(const GHExecuteTree::SharedPtr & goalHandle) {
+    if (!goalHandle) {
+        // the server did not accept
+        uiPanel->btStart->setEnabled(true);
+    } else {
+        // the server accepted, enable the cancel
+        uiPanel->btStop->setEnabled(true);
+    }
+}
+
+void MissionPanel::taskCompleteCb(const GHExecuteTree::WrappedResult & result) {
+    // we can re-enable the staret button and disable the stop button
     uiPanel->btStart->setEnabled(true);
     uiPanel->btStop->setEnabled(false);
-  }
 
-  // get our local rosnode
-  auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+    // if the completion was unintended or , change the stylesheet of the stack view
+    if (result.code == rclcpp_action::ResultCode::ABORTED) {
+        // set the red stylesheet
+        uiPanel->btStackView->setStyleSheet("QTreeView{background: rgb(200, 100, 100)}");
 
-  RVIZ_COMMON_LOG_INFO("MissionPanel: Preparing to send refresh request");
-
-  mercury_msgs::srv::ListTrees::Request::SharedPtr startReq =
-    std::make_shared<mercury_msgs::srv::ListTrees::Request>();
-  auto start = node->get_clock()->now();
-  while (!refreshClient->wait_for_service(100ms))
-    if (node->get_clock()->now() - start > 1s || !rclcpp::ok()) {
-      RVIZ_COMMON_LOG_INFO("MissionPanel: Refresh server not online");
-      return;
+        // create a timer to clear it in 1 second
+        QTimer::singleShot(1000, [this](void) { uiPanel->btStackView->setStyleSheet(""); });
     }
-
-  auto refreshFutureInfo = refreshClient->async_send_request(startReq);
-  refreshFuture = refreshFutureInfo.share();
-  refreshFutureid = refreshFutureInfo.request_id;
-
-  // set a timer to get the results so we dont lock the thread :)
-  // clear the timer ticks
-  timerTick = 0;
-
-  RVIZ_COMMON_LOG_INFO("MissionPanel: Scheduled refresh timer");
-
-  // set a oneshot timer for 1s into the future and check status
-  QTimer::singleShot(250, [this]() { waitForRefresh(); });
-}
-
-void MissionPanel::waitForRefresh()
-{
-  if (!refreshFuture.valid()) {
-    RVIZ_COMMON_LOG_ERROR("BagItem: stop future invalidated while sending request");
-
-    // clear the lookup lockout
-    refreshFutureid = -1;
-
-    // prevent a re-schedule
-    return;
-  }
-
-  // check if future has validated
-  auto futureStatus = refreshFuture.wait_for(10ms);
-  if (futureStatus == std::future_status::timeout && timerTick < 10) {
-    QTimer::singleShot(250, [this]() { waitForRefresh(); });
-
-    timerTick++;
-  } else if (futureStatus != std::future_status::timeout) {
-    // future has come back parse the PID information
-    auto response = refreshFuture.get();
-
-    RVIZ_COMMON_LOG_INFO("MissionPanel: refresh request validated");
-
-    uiPanel->btSelect->clear();
-    uiPanel->btSelect->addItem("None Selected");
-
-    // keep a list of the valid trees
-    treeList.clear();
-    treeList.insert(treeList.end(), response->trees.begin(), response->trees.end());
-
-    for (auto tree : response->trees) {
-      // push these into the combo box
-      uiPanel->btSelect->addItem(QString::fromStdString(tree));
-    }
-  } else if (timerTick == 10) {
-    RVIZ_COMMON_LOG_ERROR("MissionPanel: refresh service never responded");
-
-    // remove the failed request
-    refreshClient->remove_pending_request(refreshFutureid);
-  }
-}
-
-void MissionPanel::handleSelectTree(int selection)
-{
-  std::string treeFile = uiPanel->btSelect->itemText(selection).toStdString();
-
-  bool found = std::find(treeList.begin(), treeList.end(), treeFile) != treeList.end();
-  if (found) {
-    // enable the start button
-    uiPanel->btStart->setEnabled(true);
-  } else {
-    uiPanel->btStart->setEnabled(false);
-  }
-}
-
-void MissionPanel::startTask()
-{
-  // disable the start button
-  uiPanel->btStart->setEnabled(false);
-
-  // get our local rosnode
-  auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
-
-  auto start = node->get_clock()->now();
-  while (!actionServer->wait_for_action_server(100ms))
-    if (node->get_clock()->now() - start > 1s || !rclcpp::ok()) {
-      // we have timed out waiting, re-enable the button
-      uiPanel->btStart->setEnabled(true);
-      return;
-    }
-
-  auto goal = ExecuteTree::Goal();
-  goal.tree_path = uiPanel->btSelect->currentText().toStdString();
-
-  // create the goal callbacks to bind to
-  auto sendGoalOptions = rclcpp_action::Client<ExecuteTree>::SendGoalOptions();
-  sendGoalOptions.goal_response_callback = std::bind(&MissionPanel::taskStartCb, this, _1);
-  sendGoalOptions.feedback_callback = std::bind(&MissionPanel::taskFeedbackCb, this, _1, _2);
-  sendGoalOptions.result_callback = std::bind(&MissionPanel::taskCompleteCb, this, _1);
-
-  // send the goal with the callbacks configured
-  actionServer->async_send_goal(goal, sendGoalOptions);
-}
-
-void MissionPanel::taskStartCb(const GHExecuteTree::SharedPtr & goalHandle)
-{
-  if (!goalHandle) {
-    // the server did not accept
-    uiPanel->btStart->setEnabled(true);
-  } else {
-    // the server accepted, enable the cancel
-    uiPanel->btStop->setEnabled(true);
-  }
-}
-
-void MissionPanel::taskCompleteCb(const GHExecuteTree::WrappedResult & result)
-{
-  // we can re-enable the staret button and disable the stop button
-  uiPanel->btStart->setEnabled(true);
-  uiPanel->btStop->setEnabled(false);
-
-  // if the completion was unintended or , change the stylesheet of the stack view
-  if (result.code == rclcpp_action::ResultCode::ABORTED) {
-    // set the red stylesheet
-    uiPanel->btStackView->setStyleSheet("QTreeView{background: rgb(200, 100, 100)}");
-
-    // create a timer to clear it in 1 second
-    QTimer::singleShot(1000, [this](void) { uiPanel->btStackView->setStyleSheet(""); });
-  }
 }
 
 void MissionPanel::taskFeedbackCb(
-  GHExecuteTree::SharedPtr goalHandle, ExecuteTree::Feedback::ConstSharedPtr feedback)
-{
-  // anything we want to do if autonomy gives feedback
+    GHExecuteTree::SharedPtr goalHandle, ExecuteTree::Feedback::ConstSharedPtr feedback) {
+    // anything we want to do if autonomy gives feedback
 }
 
-void MissionPanel::cancelAccept(const action_msgs::srv::CancelGoal::Response::SharedPtr resp)
-{
-  // anything we want to do when the cancels are accepted
+void MissionPanel::cancelAccept(const action_msgs::srv::CancelGoal::Response::SharedPtr resp) {
+    // anything we want to do when the cancels are accepted
 }
 
-void MissionPanel::stackCb(const mercury_msgs::msg::TreeStack & msg)
-{
-  // clean the tree
-  model->clear();
+void MissionPanel::stackCb(const mercury_msgs::msg::TreeStack & msg) {
+    // clean the tree
+    model->clear();
 
-  // get the root again
-  QStandardItem * parentItem = model->invisibleRootItem();
+    // get the root again
+    QStandardItem * parentItem = model->invisibleRootItem();
 
-  // add the new tree
-  for (auto name : msg.stack) {
-    QStandardItem * item = new QStandardItem(QString::fromStdString(name));
-    parentItem->appendRow(item);
-  }
+    // add the new tree
+    for (auto name : msg.stack) {
+        QStandardItem * item = new QStandardItem(QString::fromStdString(name));
+        parentItem->appendRow(item);
+    }
 }
 
 void MissionPanel::ledCb(const mercury_msgs::msg::LedCommand & cmd) { lastLedCommand = cmd; }
 
-void MissionPanel::cancelTask()
-{
-  actionServer->async_cancel_all_goals(std::bind(&MissionPanel::cancelAccept, this, _1));
+void MissionPanel::cancelTask() {
+    actionServer->async_cancel_all_goals(std::bind(&MissionPanel::cancelAccept, this, _1));
 }
 
-//TODO: UPDATE LED READOUT FOR BOTH CAGES
-void MissionPanel::updateLedReadout(void)
-{
-  float brightness = 0;
-  auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
-  double current_time_seconds = node->get_clock()->now().seconds();
-  switch (lastLedCommand.mode) {
-    case mercury_msgs::msg::LedCommand::MODE_SOLID:
-      brightness = 1;
-      break;
-    case mercury_msgs::msg::LedCommand::MODE_SLOW_FLASH:
-      brightness = (fmod(current_time_seconds, 2) < 1 ? 0 : 1);
-      break;
-    case mercury_msgs::msg::LedCommand::MODE_FAST_FLASH:
-      brightness = (fmod(current_time_seconds, 0.5) < 0.25 ? 0 : 1);
-      break;
-    case mercury_msgs::msg::LedCommand::MODE_BREATH:
-      brightness = (sin(fmod(current_time_seconds, 3) * 2 * M_PI / 3) + 1) / 2;
-      break;
-    default:
-      brightness = 0;
-  }
+// TODO: UPDATE LED READOUT FOR BOTH CAGES
+void MissionPanel::updateLedReadout(void) {
+    float brightness = 0;
+    auto node = getDisplayContext()->getRosNodeAbstraction().lock()->get_raw_node();
+    double current_time_seconds = node->get_clock()->now().seconds();
+    switch (lastLedCommand.mode) {
+        case mercury_msgs::msg::LedCommand::MODE_SOLID:
+            brightness = 1;
+            break;
+        case mercury_msgs::msg::LedCommand::MODE_SLOW_FLASH:
+            brightness = (fmod(current_time_seconds, 2) < 1 ? 0 : 1);
+            break;
+        case mercury_msgs::msg::LedCommand::MODE_FAST_FLASH:
+            brightness = (fmod(current_time_seconds, 0.5) < 0.25 ? 0 : 1);
+            break;
+        case mercury_msgs::msg::LedCommand::MODE_BREATH:
+            brightness = (sin(fmod(current_time_seconds, 3) * 2 * M_PI / 3) + 1) / 2;
+            break;
+        default:
+            brightness = 0;
+    }
 
-  double bgRed = lastLedCommand.red * brightness, bgGreen = lastLedCommand.green * brightness,
-         bgBlue = lastLedCommand.blue * brightness, avg = (bgRed + bgGreen + bgBlue) / 3,
-         fgMono = (avg > 128 ? 0 : 255);
+    double bgRed = lastLedCommand.red * brightness, bgGreen = lastLedCommand.green * brightness,
+           bgBlue = lastLedCommand.blue * brightness, avg = (bgRed + bgGreen + bgBlue) / 3,
+           fgMono = (avg > 128 ? 0 : 255);
 
-  QString new_stylesheet =
-    QString("QLabel {color: rgb(%1, %1, %1); background-color: rgb(%2, %3, %4)}")
-      .arg(fgMono)
-      .arg(bgRed)
-      .arg(bgGreen)
-      .arg(bgBlue);
+    QString new_stylesheet =
+        QString("QLabel {color: rgb(%1, %1, %1); background-color: rgb(%2, %3, %4)}")
+            .arg(fgMono)
+            .arg(bgRed)
+            .arg(bgGreen)
+            .arg(bgBlue);
 
-  uiPanel->status_label->setStyleSheet(new_stylesheet);
+    uiPanel->status_label->setStyleSheet(new_stylesheet);
 }
 
-}  // namespace mercury_rviz
+} // namespace mercury_rviz
 
-#include <pluginlib/class_list_macros.hpp>  // NOLINT
+#include <pluginlib/class_list_macros.hpp> // NOLINT
 PLUGINLIB_EXPORT_CLASS(mercury_rviz::MissionPanel, rviz_common::Panel);

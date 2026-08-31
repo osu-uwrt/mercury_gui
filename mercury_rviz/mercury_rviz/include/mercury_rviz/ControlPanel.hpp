@@ -37,146 +37,144 @@
 #define TARGET_POSITION (1)
 #define CONTROLLER_OUTPUT_TYPE CONTROLLER_CMD
 
-namespace mercury_rviz
-{
+namespace mercury_rviz {
 
-class ControlPanel : public rviz_common::Panel
-{
-  using Trigger = std_srvs::srv::Trigger;
-  using SetBool = std_srvs::srv::SetBool;
-  using SetPose = robot_localization::srv::SetPose;
+class ControlPanel : public rviz_common::Panel {
+    using Trigger = std_srvs::srv::Trigger;
+    using SetBool = std_srvs::srv::SetBool;
+    using SetPose = robot_localization::srv::SetPose;
 
 Q_OBJECT public : ControlPanel(QWidget * parent = 0);
-  ~ControlPanel();
+    ~ControlPanel();
 
-  void load(const rviz_common::Config & config) override;
-  void save(rviz_common::Config config) const override;
+    void load(const rviz_common::Config & config) override;
+    void save(rviz_common::Config config) const override;
 
-  void onInitialize() override;
+    void onInitialize() override;
 
-  // ROS Subscriber callbacks
-  void odomCallback(const nav_msgs::msg::Odometry & msg);
-  void diagCallback(const diagnostic_msgs::msg::DiagnosticArray & msg);
-  void selectedPose(const geometry_msgs::msg::PoseStamped & msg);
+    // ROS Subscriber callbacks
+    void odomCallback(const nav_msgs::msg::Odometry & msg);
+    void diagCallback(const diagnostic_msgs::msg::DiagnosticArray & msg);
+    void selectedPose(const geometry_msgs::msg::PoseStamped & msg);
 
-  // ROS timer callbacks
-  void sendKillMsgTimer();
+    // ROS timer callbacks
+    void sendKillMsgTimer();
 
-  enum control_modes { DISABLED, FEEDFORWARD, VELOCITY, POSITION, TELEOP = 255 };
+    enum control_modes { DISABLED, FEEDFORWARD, VELOCITY, POSITION, TELEOP = 255 };
 
 protected Q_SLOTS:
-  // QT slots (function callbacks)
-  // slots for handling mode setting of the controller
-  void handleEnable();
-  void handleDisable();  // pressing disable asserts kill and clears command
-  void switchMode(uint8_t mode, bool override = false);
+    // QT slots (function callbacks)
+    // slots for handling mode setting of the controller
+    void handleEnable();
+    void handleDisable(); // pressing disable asserts kill and clears command
+    void switchMode(uint8_t mode, bool override = false);
 
-  void handleAuxDown();
-  void handleAuxUp();
+    void handleAuxDown();
+    void handleAuxUp();
 
-  // slots for controlling the UI
-  void toggleDegrees();
-  void refreshUI();
+    // slots for controlling the UI
+    void toggleDegrees();
+    void refreshUI();
 
-  // slots for sending commands to the vehicle
-  void handleLocalDive();
-  void handleCurrent();
-  void handleCommand(bool updateInteractiveMarker);
+    // slots for sending commands to the vehicle
+    void handleLocalDive();
+    void handleCurrent();
+    void handleCommand(bool updateInteractiveMarker);
 
-  //slots for parameter relaod buttons
-  void handleReloadController();
+    // slots for parameter relaod buttons
+    void handleReloadController();
 
-  //simualtor apply
-  void simulator_apply_clickec();
+    // simualtor apply
+    void simulator_apply_clickec();
 
-  //publish the current set point
-  void pubCurrentSetpoint();
+    // publish the current set point
+    void pubCurrentSetpoint();
 
 private:
-  bool transformBetweenFrames(
-    geometry_msgs::msg::Pose pose_in, geometry_msgs::msg::Pose & pose_out,
-    const std::string & from_frame, const std::string & to_frame);
-  bool getDesiredSetpointFromTextboxes(double results[6]);
-  void syncSetptMarkerToTextboxes(bool applyChanges = true);
-  void setptMarkerFeedback(
-    interactive_markers::InteractiveMarkerServer::FeedbackConstSharedPtr feedback);
-  void updateCalStatus(const std::string & status);
-  void callTriggerService(rclcpp::Client<Trigger>::SharedPtr client);
-  void callSetBoolService(rclcpp::Client<SetBool>::SharedPtr client, bool value);
-  void callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose);
-  void waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client);
-  void waitForSetBoolResponse(rclcpp::Client<SetBool>::SharedPtr client);
-  void waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client);
-  void displayPopupWindow(const std::string & warningMessage, const std::string & text);
-  bool checkForDuplicateTopics();
-  bool last_duplicate_state;
-  std::map<std::string, bool> topic_duplicate_status;
-  std::string duplicate_topics_list;
+    bool transformBetweenFrames(
+        geometry_msgs::msg::Pose pose_in, geometry_msgs::msg::Pose & pose_out,
+        const std::string & from_frame, const std::string & to_frame);
+    bool getDesiredSetpointFromTextboxes(double results[6]);
+    void syncSetptMarkerToTextboxes(bool applyChanges = true);
+    void setptMarkerFeedback(
+        interactive_markers::InteractiveMarkerServer::FeedbackConstSharedPtr feedback);
+    void updateCalStatus(const std::string & status);
+    void callTriggerService(rclcpp::Client<Trigger>::SharedPtr client);
+    void callSetBoolService(rclcpp::Client<SetBool>::SharedPtr client, bool value);
+    void callSetPoseService(rclcpp::Client<SetPose>::SharedPtr client, std::vector<double> pose);
+    void waitForTriggerResponse(rclcpp::Client<Trigger>::SharedPtr client);
+    void waitForSetBoolResponse(rclcpp::Client<SetBool>::SharedPtr client);
+    void waitForSetPoseResponse(rclcpp::Client<SetPose>::SharedPtr client);
+    void displayPopupWindow(const std::string & warningMessage, const std::string & text);
+    bool checkForDuplicateTopics();
+    bool last_duplicate_state;
+    std::map<std::string, bool> topic_duplicate_status;
+    std::string duplicate_topics_list;
 
-  // UI Panel instance
-  Ui_ControlPanel * uiPanel;
+    // UI Panel instance
+    Ui_ControlPanel * uiPanel;
 
-  // robot namespace used for config save and load
-  std::string robot_ns;
-  std::string hostname;
+    // robot namespace used for config save and load
+    std::string robot_ns;
+    std::string hostname;
 
-  // doubles for max depth and duration for odom timeout
-  double max_depth_in_place, tgt_in_place_depth;
-  std::chrono::duration<double> odom_timeout;
+    // doubles for max depth and duration for odom timeout
+    double max_depth_in_place, tgt_in_place_depth;
+    std::chrono::duration<double> odom_timeout;
 
-  // mode for sending commands to the controller
-  uint8_t ctrlMode;
+    // mode for sending commands to the controller
+    uint8_t ctrlMode;
 
-  // last time we have recieved odom
-  builtin_interfaces::msg::Time odomTime;
+    // last time we have recieved odom
+    builtin_interfaces::msg::Time odomTime;
 
-  // internal flags
-  bool vehicleEnabled = false;
-  bool degreeReadout = true;
+    // internal flags
+    bool vehicleEnabled = false;
+    bool degreeReadout = true;
 
-  // QT ui timer for handling data freshness
-  QTimer * uiTimer;
+    // QT ui timer for handling data freshness
+    QTimer * uiTimer;
 
-  //pid for teleop fork-exec
-  pid_t teleopPID;
+    // pid for teleop fork-exec
+    pid_t teleopPID;
 
-  // ROS Publishers
-  rclcpp::Publisher<mercury_msgs::msg::ControllerCommand>::SharedPtr ctrlCmdLinPub, ctrlCmdAngPub;
-  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr auxPub;
-  rclcpp::Publisher<mercury_msgs::msg::KillSwitchReport>::SharedPtr killStatePub;
+    // ROS Publishers
+    rclcpp::Publisher<mercury_msgs::msg::ControllerCommand>::SharedPtr ctrlCmdLinPub, ctrlCmdAngPub;
+    rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr auxPub;
+    rclcpp::Publisher<mercury_msgs::msg::KillSwitchReport>::SharedPtr killStatePub;
 
-  // ROS Timers
-  rclcpp::TimerBase::SharedPtr killPubTimer;
-  rclcpp::TimerBase::SharedPtr setPointPubTimer;
+    // ROS Timers
+    rclcpp::TimerBase::SharedPtr killPubTimer;
+    rclcpp::TimerBase::SharedPtr setPointPubTimer;
 
-  //Last Commanded position
-  geometry_msgs::msg::Pose lastCommandedPose;
+    // Last Commanded position
+    geometry_msgs::msg::Pose lastCommandedPose;
 
-  // ROS Subscribers
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odomSub;
-  rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr selectPoseSub;
+    // ROS Subscribers
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odomSub;
+    rclcpp::Subscription<diagnostic_msgs::msg::DiagnosticArray>::SharedPtr diagSub;
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr selectPoseSub;
 
-  //service clients
-  rclcpp::Client<Trigger>::SharedPtr reloadCompleteClient;
+    // service clients
+    rclcpp::Client<Trigger>::SharedPtr reloadCompleteClient;
 
-  rclcpp::Client<SetBool>::SharedPtr setTeleopClient;
+    rclcpp::Client<SetBool>::SharedPtr setTeleopClient;
 
-  rclcpp::Client<SetPose>::SharedPtr setSimPoseClient;
+    rclcpp::Client<SetPose>::SharedPtr setSimPoseClient;
 
-  std::shared_future<Trigger::Response::SharedPtr> activeClientFuture;
-  std::shared_future<SetBool::Response::SharedPtr> activeSetBoolClientFuture;
-  std::shared_future<SetPose::Response::SharedPtr> activeSetPoseClientFuture;
-  int64_t srvReqId;
-  rclcpp::Time clientSendTime;
+    std::shared_future<Trigger::Response::SharedPtr> activeClientFuture;
+    std::shared_future<SetBool::Response::SharedPtr> activeSetBoolClientFuture;
+    std::shared_future<SetPose::Response::SharedPtr> activeSetPoseClientFuture;
+    int64_t srvReqId;
+    rclcpp::Time clientSendTime;
 
-  //interactive marker server
-  std::shared_ptr<interactive_markers::InteractiveMarkerServer> setptServer;
-  visualization_msgs::msg::InteractiveMarker interactiveSetpointMarker;
+    // interactive marker server
+    std::shared_ptr<interactive_markers::InteractiveMarkerServer> setptServer;
+    visualization_msgs::msg::InteractiveMarker interactiveSetpointMarker;
 
-  //tf buffer and listener
-  std::shared_ptr<tf2_ros::Buffer> tf_buffer;
-  std::shared_ptr<tf2_ros::TransformListener> tf_listener;
+    // tf buffer and listener
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer;
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener;
 };
 
-}  // namespace mercury_rviz
+} // namespace mercury_rviz

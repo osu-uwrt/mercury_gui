@@ -14,80 +14,77 @@
 #include "mercury_rviz/GuiSrvClient.hpp"
 #include "ui_MappingPanel.h"
 
-namespace mercury_rviz
-{
+namespace mercury_rviz {
 
-class MappingPanel : public rviz_common::Panel
-{
-  using ModelFrame = chameleon_tf_msgs::action::ModelFrame;
-  using SendGoalOptions = rclcpp_action::Client<ModelFrame>::SendGoalOptions;
-  using CalibGoalHandle = rclcpp_action::Client<ModelFrame>::GoalHandle;
+class MappingPanel : public rviz_common::Panel {
+    using ModelFrame = chameleon_tf_msgs::action::ModelFrame;
+    using SendGoalOptions = rclcpp_action::Client<ModelFrame>::SendGoalOptions;
+    using CalibGoalHandle = rclcpp_action::Client<ModelFrame>::GoalHandle;
 
-  using MappingTarget = mercury_msgs::srv::MappingTarget;
+    using MappingTarget = mercury_msgs::srv::MappingTarget;
 #ifdef USE_ZED_MSGS
-  using StartSvoRec = zed_msgs::srv::StartSvoRec;
+    using StartSvoRec = zed_msgs::srv::StartSvoRec;
 #endif
-  using Trigger = std_srvs::srv::Trigger;
+    using Trigger = std_srvs::srv::Trigger;
 
-  Q_OBJECT
+    Q_OBJECT
 public:
-  MappingPanel(QWidget * parent = 0);
-  ~MappingPanel();
+    MappingPanel(QWidget * parent = 0);
+    ~MappingPanel();
 
-  void load(const rviz_common::Config & config) override;
-  void save(rviz_common::Config config) const override;
-  void onInitialize() override;
+    void load(const rviz_common::Config & config) override;
+    void save(rviz_common::Config config) const override;
+    void onInitialize() override;
 
 private Q_SLOTS:
-  void calibMapFrame();
-  void setMappingTarget();
-  void zedSvoStart();
-  void zedSvoStop();
-  void captureImage();
+    void calibMapFrame();
+    void setMappingTarget();
+    void zedSvoStart();
+    void zedSvoStop();
+    void captureImage();
 
 private:
-  void setStatus(const QString & text, const QString & color);
+    void setStatus(const QString & text, const QString & color);
 
-  void updateFfcRecordingIndicator(bool recording);
+    void updateFfcRecordingIndicator(bool recording);
 
-  template <typename T>
-  void serviceResponseCb(
-    const std::string & srvName, typename rclcpp::Client<T>::SharedResponse response)
-  {
-    std::string successStr = (response->success ? "Succeeded" : "Failed");
+    template <typename T>
+    void serviceResponseCb(
+        const std::string & srvName, typename rclcpp::Client<T>::SharedResponse response) {
+        std::string successStr = (response->success ? "Succeeded" : "Failed");
 
-    setStatus(
-      QString::fromStdString("Call to %1 %2; %3")
-        .arg(
-          QString::fromStdString(srvName), QString::fromStdString(successStr),
-          QString::fromStdString(response->message)),
-      (response->success ? "000000" : "FF0000"));
-  }
+        setStatus(
+            QString::fromStdString("Call to %1 %2; %3")
+                .arg(
+                    QString::fromStdString(srvName), QString::fromStdString(successStr),
+                    QString::fromStdString(response->message)),
+            (response->success ? "000000" : "FF0000"));
+    }
 
-  // tag cal stuff
-  void goalResponseCb(const CalibGoalHandle::SharedPtr & goal_handle);
-  void feedbackCb(
-    CalibGoalHandle::SharedPtr, const std::shared_ptr<const ModelFrame::Feedback> feedback);
-  void resultCb(const CalibGoalHandle::WrappedResult & result);
+    // tag cal stuff
+    void goalResponseCb(const CalibGoalHandle::SharedPtr & goal_handle);
+    void feedbackCb(
+        CalibGoalHandle::SharedPtr, const std::shared_ptr<const ModelFrame::Feedback> feedback);
+    void resultCb(const CalibGoalHandle::WrappedResult & result);
 
-  // mapping target stuff
-  void mappingStatusCb(const mercury_msgs::msg::MappingTargetInfo::SharedPtr msg);
-  void mappingTargetResultCb(
-    const std::string & srvName, rclcpp::Client<MappingTarget>::SharedResponse response);
+    // mapping target stuff
+    void mappingStatusCb(const mercury_msgs::msg::MappingTargetInfo::SharedPtr msg);
+    void mappingTargetResultCb(
+        const std::string & srvName, rclcpp::Client<MappingTarget>::SharedResponse response);
 
-  Ui_MappingPanel * ui;
-  std::string robotNs;
-  bool calibrationInProgress, loaded = false;
+    Ui_MappingPanel * ui;
+    std::string robotNs;
+    bool calibrationInProgress, loaded = false;
 
-  rclcpp_action::Client<chameleon_tf_msgs::action::ModelFrame>::SharedPtr calibClient;
-  rclcpp::Subscription<mercury_msgs::msg::MappingTargetInfo>::SharedPtr mappingTargetInfoSub;
-  GuiSrvClient<MappingTarget>::SharedPtr mappingTargetClient;
-  GuiSrvClient<Trigger>::SharedPtr captureImageClient;
+    rclcpp_action::Client<chameleon_tf_msgs::action::ModelFrame>::SharedPtr calibClient;
+    rclcpp::Subscription<mercury_msgs::msg::MappingTargetInfo>::SharedPtr mappingTargetInfoSub;
+    GuiSrvClient<MappingTarget>::SharedPtr mappingTargetClient;
+    GuiSrvClient<Trigger>::SharedPtr captureImageClient;
 #ifdef USE_ZED_MSGS
-  // For ffc camera
-  GuiSrvClient<StartSvoRec>::SharedPtr ffcStartSvoClient;
-  GuiSrvClient<Trigger>::SharedPtr ffcStopSvoClient;
+    // For ffc camera
+    GuiSrvClient<StartSvoRec>::SharedPtr ffcStartSvoClient;
+    GuiSrvClient<Trigger>::SharedPtr ffcStopSvoClient;
 #endif
 };
 
-}  // namespace mercury_rviz
+} // namespace mercury_rviz
