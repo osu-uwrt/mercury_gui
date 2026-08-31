@@ -14,6 +14,7 @@
 
   <depend>mercury_msgs</depend>
   <depend>mercury_meshes</depend>
+  <depend>chameleon_tf_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>
